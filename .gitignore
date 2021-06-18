@@ -1,6 +1,7 @@
 # Custom ignores
 data/
 experiments/
+wandb
 
 
 # Byte-compiled / optimized / DLL files

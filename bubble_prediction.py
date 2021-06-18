@@ -1,6 +1,7 @@
 import collections
 import copy
 import os
+import sys
 
 import torch
 import torch.nn as nn
@@ -31,6 +32,7 @@ flags.DEFINE_float('learning_rate', 1e-3, 'Learning rate.')
 flags.DEFINE_float('weight_decay', 0, 'Weight decay (L2 regularization).')
 flags.DEFINE_integer('batch_size', 2048, 'Number of examples per batch.')
 flags.DEFINE_integer('epochs', 20, 'Number of epochs for training.')
+flags.DEFINE_integer('chunk_size', 50, 'How large the time chunks will be')
 flags.DEFINE_string('experiment_name', 'exp', 'Defines experiment name.')
 flags.DEFINE_string('model_checkpoint', '',
                                         'Specifies the checkpont for analyzing.')
@@ -67,21 +69,31 @@ class BubblePredictor(nn.Module):
             hidden_size=hidden_size,
             bias=bias
         )
-        self.bubble_prediction = nn.Linear(hidden_size, 3).double()
+        self.bubble_prediction = nn.Linear(hidden_size, 3)
 
         return
     
     def forward(self, history, state=None):
-        batch_size, history_steps = history.shape
+        batch_size, history_steps, _ = history.shape
 
-        state = self.rnn_module(history, state)
+        logits = None
+        logit_set = False
+
+        for step in range(history_steps):
+            state = self.rnn_module(history[:, step, :], state)
         
-        if isinstance(state, tuple):
-            outputs, _ = state
-        else:
-            outputs = state
-        
-        logits = self.bubble_prediction(outputs)
+            if isinstance(state, tuple):
+                outputs, _ = state
+            else:
+                outputs = state
+            
+            pred = self.bubble_prediction(outputs).unsqueeze(1)
+            
+            if not logit_set:
+                logits = pred
+                logit_set = True
+            else:
+                logits = torch.cat((logits, pred), 1)
 
         return logits, state
 
@@ -104,12 +116,13 @@ def bubble_trainer():
         start_time=_decode_time_str(FLAGS.start_time),
         end_time=_decode_time_str(FLAGS.end_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
+        chunk_size=FLAGS.chunk_size,
     )
     train_loader = DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
-        shuffle=True,
-        num_workers=8
+        shuffle=False,
+        num_workers=1
     )
     
     best_model = None
@@ -129,7 +142,7 @@ def bubble_trainer():
 
     WANDB.init(
         project="research",
-        name="{}_{}".format(FLAGS.label, FLAGS.rnn_module),
+        name="{}_{}_{}".format(FLAGS.label, FLAGS.rnn_module, FLAGS.chunk_size),
         reinit=True
     )
     
@@ -139,7 +152,7 @@ def bubble_trainer():
     )
 
     model.to(device)
-    WANDB.watch(model)
+    WANDB.watch(model, log=None)
     
     print('Model Architecture:\n%s' % model)
 
@@ -150,58 +163,74 @@ def bubble_trainer():
         weight_decay=FLAGS.weight_decay
     )
 
-    phase = 'train'
-
     try:
         for epoch in range(FLAGS.epochs):
-            model.train()
-            dataset = train_dataset
-            data_loader = train_loader
+            for phase in ('train', 'eval')
+                model.train()
+                dataset = train_dataset
+                data_loader = train_loader
 
-            num_steps = len(data_loader)
-            running_loss = 0.0
-            running_corrects = 0
+                num_steps = len(data_loader)
+                running_loss = 0.0
+                running_corrects = 0
 
-            progress_bar = tqdm(enumerate(data_loader))
-            for step, (sequences, labels) in progress_bar:
-                total_step = epoch * len(data_loader) + step
+                progress_bar = tqdm(enumerate(data_loader))
+                for step, (sequences, labels) in progress_bar:
+                    total_step = epoch * len(data_loader) + step
 
-                sequences = sequences.to(device)
-                labels = labels.to(device)
+                    sequences = sequences.to(device)
+                    labels = labels.to(device)
 
-                optimizer.zero_grad()
+                    optimizer.zero_grad()
 
-                outputs, _ = model(sequences)
-                _, preds = torch.max(outputs, 1)
-                loss = criterion(outputs, labels.squeeze_(1))
-                corrects = torch.sum(preds == labels.data)
+                    outputs, _ = model(sequences)
 
-                loss.backward()
-                optimizer.step()
+                    _, o_w, _ = outputs.shape
+                    _, l_w, _ = labels.shape
+                    assert o_w == l_w
 
-                writer.add_scalar('loss', loss.item(), total_step)
-                writer.add_scalar('accuracy', corrects.item() / len(labels), total_step)
-                progress_bar.set_description(
-                    'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Epoch %d/%d' %
-                    (step, num_steps, loss.item(), corrects.item() / len(labels), epoch, FLAGS.epochs)
-                )
-                if step % 100 == 0:
-                    WANDB.log({'Training Loss': loss.item(), 'Training Accuracy': corrects.item() / len(labels)})
-            
-                running_loss += loss.item() * sequences.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+                    loss = 0.0
+                    corrects = 0
+                    for history in range(o_w):
+                        output = outputs[:, history, :]
+                        label = labels[:, history, :]
 
-            epoch_loss = running_loss / len(dataset)
-            epoch_acc = running_corrects.double() / len(dataset)
-            WANDB.log({"Training Accurancy": epoch_acc, "Training Loss": epoch_loss})
-            print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
-                        (epoch + 1, phase, epoch_acc, epoch_loss))
+                        _, preds = torch.max(output, 1)
+                        loss += criterion(output, label.squeeze(1))
+                        corrects += torch.sum(preds == label.data)
+
+                    loss.backward()
+                    optimizer.step()
+
+                    # writer.add_scalar('loss', loss.item(), total_step)
+                    # writer.add_scalar('accuracy', corrects.item() / len(labels), total_step)
+                    progress_bar.set_description(
+                        'Step: %d/%d, Loss: %.4f, Loss per: %.4f, Accuracy: %.4f, Epoch %d/%d' %
+                        (step, num_steps, loss.item(), loss.item() / o_w, corrects.item() / len(labels), epoch, FLAGS.epochs)
+                    )
+                    if step % 10 == 0:
+                        WANDB.log({
+                            'Training Total Loss': loss.item(),
+                            'Training Accuracy': corrects.item() / (len(labels) * o_w),
+                            'Training Loss Per Chunk': loss.item() / o_w,
+                        })
+                    if torch.isnan(loss):
+                            # print("Gradient Explosion, restart run")
+                            sys.exit(1)
                 
+                    running_loss += loss.item() * sequences.size(0)
+                    running_corrects += corrects
 
-            model_copy = copy.deepcopy(model.state_dict())
-            torch.save({
-                'model': model_copy,
-            }, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
+                epoch_loss = running_loss / len(dataset)
+                epoch_acc = running_corrects / len(dataset)
+                WANDB.log({"Epoch Training Accurancy": epoch_acc, "Epoch Training Loss": epoch_loss})
+                print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
+                            (epoch + 1, phase, epoch_acc, epoch_loss))
+                    
+                model_copy = copy.deepcopy(model.state_dict())
+                torch.save({
+                    'model': model_copy,
+                }, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
 
     except KeyboardInterrupt:
         pass

@@ -13,21 +13,22 @@ class LSTMCell(nn.Module):
 
         #####################################################################
         # Learnable weights for the `input gate`
-        self.W_i = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size)).double()
+
+        self.W_i = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size))
         # Learnable weights for `foreget gate`
-        self.W_f = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size)).double()
+        self.W_f = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size))
         # Learnable weights for `output gate`
-        self.W_o = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size)).double()
+        self.W_o = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size))
         # Learnable weights for `new memory cell`
-        self.W_c = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size)).double()
+        self.W_c = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size))
         # Learnable weights for `new memory cell`
-        self.W_c = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size)).double()
+        self.W_c = nn.Parameter(torch.Tensor(hidden_size, hidden_size + input_size))
 
         if bias:
-            self.b_i = nn.Parameter(torch.Tensor(hidden_size)).double()
-            self.b_f = nn.Parameter(torch.Tensor(hidden_size)).double()
-            self.b_o = nn.Parameter(torch.Tensor(hidden_size)).double()
-            self.b_c = nn.Parameter(torch.Tensor(hidden_size)).double()
+            self.b_i = nn.Parameter(torch.Tensor(hidden_size))
+            self.b_f = nn.Parameter(torch.Tensor(hidden_size))
+            self.b_o = nn.Parameter(torch.Tensor(hidden_size))
+            self.b_c = nn.Parameter(torch.Tensor(hidden_size))
         else:
             self.register_parameter('b_i', None)
             self.register_parameter('b_f', None)
@@ -41,9 +42,7 @@ class LSTMCell(nn.Module):
         return
 
     def forward(self, x, prev_state):
-        #####################################################################
-        x = F.normalize(x)
-        
+        ######################################################################        
         if prev_state is None:
             batch = x.shape[0]
             prev_h = torch.zeros((batch, self.hidden_size), device=x.device)

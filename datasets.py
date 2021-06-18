@@ -43,11 +43,13 @@ class BubbleDataset(Dataset):
         start_time: datetime,
         end_time: datetime,
         bubble_measurements: str,
+        chunk_size: int,
         transform=None
     ):
         self.bubble_measurements = bubble_measurements
         self.start_time = start_time
         self.end_time = end_time
+        self.chunk_size = chunk_size
         self.transform = transform
 
         data_file = os.path.join(
@@ -86,8 +88,23 @@ class BubbleDataset(Dataset):
             print("------- Reading data from pickle file {}".format(data_file))
             self.data = pd.read_pickle(data_file)
 
-        self.tec_data_df = self.data[expand_measurements(TEC_MEASUREMENTS)].to_numpy()
+        self.tec_data_df = self.normalize_cols(
+            self.data[expand_measurements(TEC_MEASUREMENTS)]
+        ).to_numpy()
         self.ibi_data_df = self.data[[self.bubble_measurements]].to_numpy() + 1
+
+        h, w = self.tec_data_df.shape
+        trim_h = h - (h % self.chunk_size)
+
+        self.tec_data_df = self.tec_data_df[:trim_h]
+        self.ibi_data_df = self.ibi_data_df[:trim_h]
+
+        self.tec_data_df = np.reshape(
+            self.tec_data_df, (-1, self.chunk_size, w)
+        )
+        self.ibi_data_df = np.reshape(
+            self.ibi_data_df, (-1, self.chunk_size, 1)
+        )
 
         return
 
@@ -101,8 +118,16 @@ class BubbleDataset(Dataset):
 
         return data.as_dataframe()
 
+    def normalize_cols(self, df):
+        for col in df.columns:
+            df[col] = (df[col] / df[col].max()).astype(np.float32)
+
+        return df
+
     def __len__(self):
-        return len(self.data)
+        assert len(self.tec_data_df) == len(self.ibi_data_df)
+
+        return len(self.tec_data_df)
 
     def __getitem__(self, index):
         history = self.tec_data_df[index]
