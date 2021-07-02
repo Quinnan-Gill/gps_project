@@ -15,12 +15,15 @@ from tqdm import tqdm
 from datetime import datetime
 from unittest.mock import MagicMock
 
+from utils import (
+    DATETIME_PSTR,
+    _decode_time_str
+)
 from datasets import (
     BubbleDataset,
     TEC_MEASUREMENTS,
     IBI_MEASUREMENT,
     expand_measurements,
-    DATETIME_PSTR,
 )
 from rnn_modules import LSTMCell
 
@@ -32,13 +35,16 @@ flags.DEFINE_float('learning_rate', 1e-3, 'Learning rate.')
 flags.DEFINE_float('weight_decay', 0, 'Weight decay (L2 regularization).')
 flags.DEFINE_integer('batch_size', 2048, 'Number of examples per batch.')
 flags.DEFINE_integer('epochs', 20, 'Number of epochs for training.')
-flags.DEFINE_integer('chunk_size', 50, 'How large the time chunks will be')
+flags.DEFINE_integer('window_size', 50, 'How large the time window will be')
+flags.DEFINE_integer('step_size', 5, 'How much the window shifts')
 flags.DEFINE_string('experiment_name', 'exp', 'Defines experiment name.')
 flags.DEFINE_string('model_checkpoint', '',
                                         'Specifies the checkpont for analyzing.')
 flags.DEFINE_boolean('link', False, 'Links wandb account')
-flags.DEFINE_string('start_time', '2014_01_01', 'The start datetime')
-flags.DEFINE_string('end_time', '2014_01_02', 'The end datetime')
+flags.DEFINE_string('start_train_time', '2016_01_01', 'The start datetime for training')
+flags.DEFINE_string('end_train_time', '2016_01_31', 'The end datetime for training')
+flags.DEFINE_string('start_val_time', '2017_01_01', 'The start datetime for evaluation')
+flags.DEFINE_string('end_val_time', '2017_01_31', 'The end datetime for evaluation')
 flags.DEFINE_integer('hidden_size', 50, 'Dimensionality for recurrent neuron.')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
@@ -103,9 +109,6 @@ class BubblePredictor(nn.Module):
                 param.reset_parameters()
         return
 
-def _decode_time_str(time):
-    return datetime.strptime(time, DATETIME_PSTR)
-
 def bubble_trainer():
     if FLAGS.link:
         WANDB = wandb
@@ -113,13 +116,28 @@ def bubble_trainer():
         WANDB = MagicMock()
 
     train_dataset = BubbleDataset(
-        start_time=_decode_time_str(FLAGS.start_time),
-        end_time=_decode_time_str(FLAGS.end_time),
+        start_time=_decode_time_str(FLAGS.start_train_time),
+        end_time=_decode_time_str(FLAGS.end_train_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
-        chunk_size=FLAGS.chunk_size,
+        window_size=FLAGS.window_size,
+        step_size=FLAGS.step_size,
     )
     train_loader = DataLoader(
         train_dataset,
+        batch_size=FLAGS.batch_size,
+        shuffle=False,
+        num_workers=1
+    )
+    
+    val_dataset = BubbleDataset(
+        start_time=_decode_time_str(FLAGS.start_val_time),
+        end_time=_decode_time_str(FLAGS.end_val_time),
+        bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
+        window_size=FLAGS.window_size,
+        step_size=FLAGS.step_size,
+    )
+    val_loader = DataLoader(
+        val_dataset,
         batch_size=FLAGS.batch_size,
         shuffle=False,
         num_workers=1
@@ -142,7 +160,12 @@ def bubble_trainer():
 
     WANDB.init(
         project="research",
-        name="{}_{}_{}".format(FLAGS.label, FLAGS.rnn_module, FLAGS.chunk_size),
+        name="{}_{}_{}_{}".format(
+            FLAGS.label,
+            FLAGS.rnn_module,
+            FLAGS.window_size,
+            FLAGS.step_size
+        ),
         reinit=True
     )
     
@@ -162,13 +185,19 @@ def bubble_trainer():
         lr=FLAGS.learning_rate,
         weight_decay=FLAGS.weight_decay
     )
+    best_acc = 0.0
 
     try:
         for epoch in range(FLAGS.epochs):
-            for phase in ('train', 'eval')
-                model.train()
-                dataset = train_dataset
-                data_loader = train_loader
+            for phase in ('train', 'eval'):
+                if phase == 'train':
+                    model.train()
+                    dataset = train_dataset
+                    data_loader = train_loader
+                else:
+                    model.eval()
+                    dataset = val_dataset
+                    data_loader = val_loader
 
                 num_steps = len(data_loader)
                 running_loss = 0.0
@@ -183,40 +212,60 @@ def bubble_trainer():
 
                     optimizer.zero_grad()
 
-                    outputs, _ = model(sequences)
+                    with torch.set_grad_enabled(phase == 'train'):
+                        outputs, _ = model(sequences)
 
-                    _, o_w, _ = outputs.shape
-                    _, l_w, _ = labels.shape
-                    assert o_w == l_w
+                        _, o_w, _ = outputs.shape
+                        _, l_w, _ = labels.shape
+                        assert o_w == l_w
 
-                    loss = 0.0
-                    corrects = 0
-                    for history in range(o_w):
-                        output = outputs[:, history, :]
-                        label = labels[:, history, :]
+                        loss = 0.0
+                        corrects = 0
+                        loss_list = []
+                        for history in range(o_w):
+                            output = outputs[:, history, :]
+                            label = labels[:, history, :]
 
-                        _, preds = torch.max(output, 1)
-                        loss += criterion(output, label.squeeze(1))
-                        corrects += torch.sum(preds == label.data)
+                            _, preds = torch.max(output, 1)
+                            curr_loss = criterion(output, label.squeeze(1))
+                            loss += curr_loss
+                            loss_list.append(curr_loss)
+                            corrects += torch.sum(preds == label.data)
 
-                    loss.backward()
-                    optimizer.step()
+                        if loss > 55:
+                            import pdb
+                            pdb.set_trace()
 
-                    # writer.add_scalar('loss', loss.item(), total_step)
-                    # writer.add_scalar('accuracy', corrects.item() / len(labels), total_step)
-                    progress_bar.set_description(
-                        'Step: %d/%d, Loss: %.4f, Loss per: %.4f, Accuracy: %.4f, Epoch %d/%d' %
-                        (step, num_steps, loss.item(), loss.item() / o_w, corrects.item() / len(labels), epoch, FLAGS.epochs)
-                    )
-                    if step % 10 == 0:
-                        WANDB.log({
-                            'Training Total Loss': loss.item(),
-                            'Training Accuracy': corrects.item() / (len(labels) * o_w),
-                            'Training Loss Per Chunk': loss.item() / o_w,
-                        })
-                    if torch.isnan(loss):
-                            # print("Gradient Explosion, restart run")
-                            sys.exit(1)
+                        if phase == 'train':
+                            loss.backward()
+                            optimizer.step()
+
+                            # writer.add_scalar('loss', loss.item(), total_step)
+                            # writer.add_scalar('accuracy', corrects.item() / len(labels), total_step)
+                            progress_bar.set_description(
+                                'Step: %d/%d, Loss: %.4f, Loss per: %.4f, Accuracy: %.4f, Epoch %d/%d' %
+                                (step, num_steps, loss.item(), loss.item() / o_w, corrects.item() / len(labels), epoch, FLAGS.epochs)
+                            )
+                            if step % 10 == 0:
+                                WANDB.log({
+                                    'Training Total Loss': loss.item(),
+                                    'Training Accuracy': corrects.item() / (len(labels) * o_w),
+                                    'Training Loss Per Chunk': loss.item() / o_w,
+                                })
+                            if torch.isnan(loss):
+                                    # print("Gradient Explosion, restart run")
+                                    sys.exit(1)
+                        else:
+                            progress_bar.set_description(
+                                'Step: %d/%d, Loss: %.4f, Loss per: %.4f, Accuracy: %.4f, Epoch %d/%d' %
+                                (step, num_steps, loss.item(), loss.item() / o_w, corrects.item() / len(labels), epoch, FLAGS.epochs)
+                            )
+                            if step % 10 == 0:
+                                WANDB.log({
+                                    'Eval Total Loss': loss.item(),
+                                    'Eval Accuracy': corrects.item() / (len(labels) * o_w),
+                                    'Eval Loss Per Chunk': loss.item() / o_w,
+                                })
                 
                     running_loss += loss.item() * sequences.size(0)
                     running_corrects += corrects
@@ -226,19 +275,23 @@ def bubble_trainer():
                 WANDB.log({"Epoch Training Accurancy": epoch_acc, "Epoch Training Loss": epoch_loss})
                 print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
                             (epoch + 1, phase, epoch_acc, epoch_loss))
-                    
-                model_copy = copy.deepcopy(model.state_dict())
-                torch.save({
-                    'model': model_copy,
-                }, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
+                
+                if phase == 'eval':
+                    if epoch_acc > best_acc:
+                        best_acc = epoch_acc
+                        best_model = copy.deepcopy(model.state_dict())
+                        # model_copy = copy.deepcopy(model.state_dict())
+                        torch.save({
+                            'model': best_model,
+                        }, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
 
     except KeyboardInterrupt:
         pass
 
-    final_model = copy.deepcopy(model_copy)
-    torch.save({
-        'model': final_model
-    }, os.path.join(experiment_name, 'best_model.pt'))
+    # final_model = copy.deepcopy(model_copy)
+    # torch.save({
+    #     'model': final_model
+    # }, os.path.join(experiment_name, 'best_model.pt'))
 
     return
 

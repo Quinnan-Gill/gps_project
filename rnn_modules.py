@@ -80,3 +80,6 @@ class LSTMCell(nn.Module):
             )
         )
         return
+
+
+# class Visualize
