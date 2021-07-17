@@ -2,6 +2,7 @@ import collections
 import copy
 import os
 import sys
+import time
 
 from absl import app, flags
 from datetime import datetime
@@ -12,6 +13,7 @@ from utils import (
 )
 from datasets import (
     BubbleDataset,
+    BubbleDatasetFTP,
     IBI_MEASUREMENT,
     expand_measurements,
 )
@@ -113,8 +115,13 @@ def bubble_classes(bubble_list):
 def find_bubble_frequency(metric_dataset):
     acc = Accummulator()
 
+    start_time = time.time()
     print("---- Starting Metrics ----")
     for i in range(len(metric_dataset)):
+        if i % 1000 == 0:
+            lap_time = time.time() - start_time
+            start_time = time.time()
+            print("Lap time: {}".format(lap_time))
         _, label = metric_dataset[i]
 
         acc.value_iter(i, label[0])
@@ -124,7 +131,7 @@ def find_bubble_frequency(metric_dataset):
     bubble_classes(bubble_list)
     
 def get_data_metrics():
-    metric_dataset = BubbleDataset(
+    metric_dataset = BubbleDatasetFTP(
         start_time=_decode_time_str(FLAGS.start_time),
         end_time=_decode_time_str(FLAGS.end_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
