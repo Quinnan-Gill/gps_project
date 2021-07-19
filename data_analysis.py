@@ -118,13 +118,11 @@ def find_bubble_frequency(metric_dataset):
     start_time = time.time()
     print("---- Starting Metrics ----")
     for i in range(len(metric_dataset)):
-        if i % 1000 == 0:
-            lap_time = time.time() - start_time
-            start_time = time.time()
-            print("Lap time: {}".format(lap_time))
         _, label = metric_dataset[i]
 
         acc.value_iter(i, label[0])
+    lap_time = time.time() - start_time
+    print("Lap time: {}".format(lap_time))
     
     bubble_list = acc.finish_iter(len(metric_dataset))
 

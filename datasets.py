@@ -43,7 +43,7 @@ IBI_MEASUREMENT = {
 CDF_EPOCH_1970 = 62167219200000.0
 
 ZIP_TIME_FMT = "%Y%m%dT%H%M%S"
-PRE_FETCH = 5000
+PRE_FETCH = 10000
 
 URL = "https://swarm-diss.eo.esa.int/?do=list&maxfiles={maxfiles}&pos={pos}&file=swarm%2FLevel2daily%2FEntire_mission_data%2F{measurement}%2FTMS%2F{sat}"
 # URL = "https://swarm-diss.eo.esa.int/#swarm%2FLevel2daily%2FEntire_mission_data%2FTEC%2FTMS%2FSat_{}"
@@ -117,12 +117,18 @@ class BubbleDatasetFTP(Dataset):
 
         self.size = session.query(DataMeasurement).count()
 
+        # Cached Stuff
+        self.index = 0
+        self.history = None
+        self.label = None
+        self._cache_data(self.index)
+
     def _get_data_request(
         self,
         maxfiles,
         pos,
         measurement,
-        satelite
+        satelite,
     ):
         m_url = URL.format(maxfiles=maxfiles, pos=pos, measurement=measurement, sat=satelite)
         m_url_hash = hashlib.sha1(m_url.encode("UTF-8")).hexdigest()[:10]
@@ -149,6 +155,26 @@ class BubbleDatasetFTP(Dataset):
         end_time = datetime.strptime(zip_list[-2], ZIP_TIME_FMT)
 
         return start_time, end_time
+
+    def _cache_data(self, index):
+        scale = PRE_FETCH
+        if self.window_size != 0:
+            scale *= self.window_size
+
+        if (
+            self.index == (index // scale) and
+            self.history and
+            self.label
+        ):
+            return
+
+        self.index = (index // scale)
+        self.history = self.history_subquery.offset(
+            self.index * scale
+        ).limit(scale).all()
+        self.label = self.index_subquery.offset(
+            self.index * scale
+        ).limit(scale).all()
      
     def _get_data_urls(
         self,
@@ -268,14 +294,22 @@ class BubbleDatasetFTP(Dataset):
         return self.size / self.window_size
 
     def __getitem__(self, index):
+        self._cache_data(index)
+
         if self.window_size == 0:
-            history = self.history_subquery.offset(index).limit(1).first()
-            label = self.index_subquery.offset(index).limit(1).first()
+            try:
+                history = self.history[index % PRE_FETCH]
+                label = self.label[index % PRE_FETCH]
+            except IndexError as e:
+                print(str(e))
+                print(index % PRE_FETCH)
+                print(len(self.history))
         else:
             start_index = (self.step_size * index)
+            end_index = start_index + self.window_size
 
-            history = self.history_subquery.offset(start_index).limit(self.window_size)
-            label = self.index_subquery.offset(start_index).limit(self.window_size)
+            history = self.tec_data_df[start_index:end_index]
+            label = self.ibi_data_df[start_index:end_index]
 
         return history, label
 
