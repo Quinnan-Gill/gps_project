@@ -24,6 +24,7 @@ flags.DEFINE_integer('window_size', 0, 'How large the time window will be')
 flags.DEFINE_integer('step_size', 5, 'How much the window shifts')
 flags.DEFINE_string('start_time', '2016_01_01', 'The start datetime for metrics')
 flags.DEFINE_string('end_time', '2016_01_02', 'The end datetime for metrics')
+flags.DEFINE_integer('prefetch', 100000, 'The number of entries to prefetch')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
 
@@ -135,6 +136,7 @@ def get_data_metrics():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=0,
         shift = False,
+        prefetch=FLAGS.prefetch,
         step_size=FLAGS.step_size,
     )
 

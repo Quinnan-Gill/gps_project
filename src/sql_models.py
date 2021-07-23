@@ -10,6 +10,10 @@ from sqlalchemy.sql.sqltypes import BigInteger
 from sqlalchemy.sql.visitors import CloningExternalTraversal
 
 basedir = os.path.abspath(os.path.dirname(__file__))
+
+if not os.path.exists('data'):
+    os.makedirs('data')
+
 SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'data/app.db')
 

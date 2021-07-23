@@ -43,7 +43,7 @@ IBI_MEASUREMENT = {
 CDF_EPOCH_1970 = 62167219200000.0
 
 ZIP_TIME_FMT = "%Y%m%dT%H%M%S"
-PRE_FETCH = 10000
+PRE_FETCH = 500
 
 URL = "https://swarm-diss.eo.esa.int/?do=list&maxfiles={maxfiles}&pos={pos}&file=swarm%2FLevel2daily%2FEntire_mission_data%2F{measurement}%2FTMS%2F{sat}"
 # URL = "https://swarm-diss.eo.esa.int/#swarm%2FLevel2daily%2FEntire_mission_data%2FTEC%2FTMS%2FSat_{}"
@@ -54,7 +54,7 @@ def expand_measurements(measurements):
     resulting_measurements = []
     for m in measurements:
         if m[1] > 1:
-            resulting_measurements += [m[0] + str(i) for i in range(m[1])]
+            resulting_measurements += [m[0] + str(i+1) for i in range(m[1])]
         else:
             resulting_measurements.append(m[0])
 
@@ -69,6 +69,7 @@ class BubbleDatasetFTP(Dataset):
         window_size: int,
         step_size: int,
         shift: bool = True,
+        prefetch: int = PRE_FETCH,
         maxfiles: int = 2000,
         pos: int = 500,
         satelite: str = "Sat_A",
@@ -77,6 +78,7 @@ class BubbleDatasetFTP(Dataset):
 
         self.start_time = start_time
         self.end_time = end_time
+        self.prefetch = prefetch
 
         self.time_diff = timedelta(days=1)
         self.window_size = window_size
@@ -121,6 +123,7 @@ class BubbleDatasetFTP(Dataset):
         self.index = 0
         self.history = None
         self.label = None
+        self.values_set = False
         self._cache_data(self.index)
 
     def _get_data_request(
@@ -157,24 +160,25 @@ class BubbleDatasetFTP(Dataset):
         return start_time, end_time
 
     def _cache_data(self, index):
-        scale = PRE_FETCH
+        scale = self.prefetch
         if self.window_size != 0:
             scale *= self.window_size
 
         if (
             self.index == (index // scale) and
-            self.history and
-            self.label
+            self.values_set
         ):
             return
 
         self.index = (index // scale)
-        self.history = self.history_subquery.offset(
+        print("Getting cache data {} {} {}".format(self.index, index, self.size))
+        self.history = np.asarray(self.history_subquery.offset(
             self.index * scale
-        ).limit(scale).all()
-        self.label = self.index_subquery.offset(
+        ).limit(scale).all(), dtype=np.float32)
+        self.label = np.asarray(self.index_subquery.offset(
             self.index * scale
-        ).limit(scale).all()
+        ).limit(scale).all()) + 1
+        self.values_set = True
      
     def _get_data_urls(
         self,
@@ -291,25 +295,25 @@ class BubbleDatasetFTP(Dataset):
         if self.window_size == 0:
             return self.size
 
-        return self.size / self.window_size
+        return self.size // self.window_size
 
     def __getitem__(self, index):
         self._cache_data(index)
 
         if self.window_size == 0:
             try:
-                history = self.history[index % PRE_FETCH]
-                label = self.label[index % PRE_FETCH]
+                history = self.history[index % self.prefetch]
+                label = self.label[index % self.prefetch]
             except IndexError as e:
                 print(str(e))
-                print(index % PRE_FETCH)
+                print(index % self.prefetch)
                 print(len(self.history))
         else:
             start_index = (self.step_size * index)
             end_index = start_index + self.window_size
 
-            history = self.tec_data_df[start_index:end_index]
-            label = self.ibi_data_df[start_index:end_index]
+            history = self.history[start_index:end_index]
+            label = self.label[start_index:end_index]
 
         return history, label
 

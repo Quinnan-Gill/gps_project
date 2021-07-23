@@ -20,6 +20,7 @@ from utils import (
 )
 from datasets import (
     BubbleDataset,
+    BubbleDatasetFTP,
     TEC_MEASUREMENTS,
     IBI_MEASUREMENT,
     expand_measurements,
@@ -41,9 +42,9 @@ flags.DEFINE_string('model_checkpoint', '',
                                         'Specifies the checkpont for analyzing.')
 flags.DEFINE_boolean('link', False, 'Links wandb account')
 flags.DEFINE_string('start_train_time', '2016_01_01', 'The start datetime for training')
-flags.DEFINE_string('end_train_time', '2016_01_31', 'The end datetime for training')
+flags.DEFINE_string('end_train_time', '2016_01_02', 'The end datetime for training')
 flags.DEFINE_string('start_val_time', '2017_01_01', 'The start datetime for evaluation')
-flags.DEFINE_string('end_val_time', '2017_01_31', 'The end datetime for evaluation')
+flags.DEFINE_string('end_val_time', '2017_01_02', 'The end datetime for evaluation')
 flags.DEFINE_integer('hidden_size', 50, 'Dimensionality for recurrent neuron.')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
@@ -99,7 +100,6 @@ class BubblePredictor(nn.Module):
                 logit_set = True
             else:
                 logits = torch.cat((logits, pred), 1)
-
         return logits, state
 
     def reset_parameters(self):
@@ -114,7 +114,7 @@ def bubble_trainer():
     else:
         WANDB = MagicMock()
 
-    train_dataset = BubbleDataset(
+    train_dataset = BubbleDatasetFTP(
         start_time=_decode_time_str(FLAGS.start_train_time),
         end_time=_decode_time_str(FLAGS.end_train_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
@@ -128,7 +128,7 @@ def bubble_trainer():
         num_workers=1
     )
     
-    val_dataset = BubbleDataset(
+    val_dataset = BubbleDatasetFTP(
         start_time=_decode_time_str(FLAGS.start_val_time),
         end_time=_decode_time_str(FLAGS.end_val_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
