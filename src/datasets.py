@@ -2,6 +2,7 @@ import collections
 import os
 import hashlib
 import io
+from typing import List
 import requests
 import cdflib
 import tempfile
@@ -70,6 +71,7 @@ class BubbleDatasetFTP(Dataset):
         step_size: int,
         shift: bool = True,
         prefetch: int = PRE_FETCH,
+        index_filter: List[int] = [-1],
         maxfiles: int = 2000,
         pos: int = 500,
         satelite: str = "Sat_A",
@@ -79,6 +81,7 @@ class BubbleDatasetFTP(Dataset):
         self.start_time = start_time
         self.end_time = end_time
         self.prefetch = prefetch
+        self.index_filter = index_filter
 
         self.time_diff = timedelta(days=1)
         self.window_size = window_size
@@ -109,15 +112,32 @@ class BubbleDatasetFTP(Dataset):
             if col.name in expand_measurements(TEC_MEASUREMENTS)
         ]
 
-        self.history_subquery = session.query(*history_cols).order_by(
+        self.history_subquery = session.query(*history_cols).filter(
+            and_(
+                DataMeasurement.timestamp >= self.start_time,
+                DataMeasurement.timestamp <= self.end_time
+            )
+        ).order_by(
             DataMeasurement.timestamp
         )
 
         self.index_subquery = session.query(
             DataMeasurement.bubble_index
+        ).filter(
+            and_(
+                DataMeasurement.timestamp >= self.start_time,
+                DataMeasurement.timestamp <= self.end_time
+            )
         ).order_by(DataMeasurement.timestamp)
 
-        self.size = session.query(DataMeasurement).count()
+        self.size = session.query(
+            DataMeasurement
+        ).filter(
+            and_(
+                DataMeasurement.timestamp >= self.start_time,
+                DataMeasurement.timestamp <= self.end_time
+            )
+        ).count()
 
         # Cached Stuff
         self.index = 0
@@ -171,7 +191,7 @@ class BubbleDatasetFTP(Dataset):
             return
 
         self.index = (index // scale)
-        print("Getting cache data {} {} {}".format(self.index, index, self.size))
+        # print("Getting cache data {} {} {}".format(self.index, index, self.size))
         self.history = np.asarray(self.history_subquery.offset(
             self.index * scale
         ).limit(scale).all(), dtype=np.float32)
@@ -256,9 +276,16 @@ class BubbleDatasetFTP(Dataset):
                 cdf_file = zip_file.zip_file.split('/')[-1].replace('ZIP', 'cdf')
                 zf = zipfile.ZipFile(io.BytesIO(resp.content), 'r')
 
-                tmp_dir = tempfile.mkdtemp()
-                tmp_file = zf.extract(cdf_file, path=tmp_dir)
-                cdf_obj = cdflib.CDF(tmp_file)
+                try:
+                    tmp_dir = tempfile.mkdtemp()
+                    tmp_file = zf.extract(cdf_file, path=tmp_dir)
+                    cdf_obj = cdflib.CDF(tmp_file)
+                except:
+                    print("----------------------------")
+                    print("    ERROR: Downloading:")
+                    print("{}".format(cdf_file))
+                    print("----------------------------")
+                    continue
 
                 if zip_file.measurement == "TEC":
                     tec_df["timestamp"] = pd.to_datetime((cdf_obj["Timestamp"] - CDF_EPOCH_1970)/1e3, unit='s')
@@ -270,8 +297,12 @@ class BubbleDatasetFTP(Dataset):
                     ibi_df = ibi_df.set_index("timestamp")
 
                 shutil.rmtree(tmp_dir)
-        
+
             data = pd.merge(tec_df, ibi_df, left_index=True, right_index=True)
+            h, w = data.shape
+            if self.index_filter and w > 0 and h > 0:
+                data = data[data.bubble_index != -1]
+
             data = data.reset_index()
             data.to_sql("data_measurement", engine, if_exists='append', index_label='measurement_id')
             
@@ -309,11 +340,13 @@ class BubbleDatasetFTP(Dataset):
                 print(index % self.prefetch)
                 print(len(self.history))
         else:
-            start_index = (self.step_size * index)
-            end_index = start_index + self.window_size
+            start_index = (self.step_size * index) % self.prefetch
+            end_index = (start_index + self.window_size)
 
             history = self.history[start_index:end_index]
             label = self.label[start_index:end_index]
+
+            assert history.shape[0] == self.window_size, "{}: {}: {}".format(history.shape, index, (start_index, end_index))
 
         return history, label
 

@@ -35,8 +35,8 @@ flags.DEFINE_float('learning_rate', 1e-3, 'Learning rate.')
 flags.DEFINE_float('weight_decay', 0, 'Weight decay (L2 regularization).')
 flags.DEFINE_integer('batch_size', 2048, 'Number of examples per batch.')
 flags.DEFINE_integer('epochs', 20, 'Number of epochs for training.')
-flags.DEFINE_integer('window_size', 50, 'How large the time window will be')
-flags.DEFINE_integer('step_size', 5, 'How much the window shifts')
+flags.DEFINE_integer('window_size', 120, 'How large the time window will be')
+flags.DEFINE_integer('step_size', 120, 'How much the window shifts')
 flags.DEFINE_string('experiment_name', 'exp', 'Defines experiment name.')
 flags.DEFINE_string('model_checkpoint', '',
                                         'Specifies the checkpont for analyzing.')
@@ -120,6 +120,7 @@ def bubble_trainer():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size,
         step_size=FLAGS.step_size,
+        index_filter=None,
     )
     train_loader = DataLoader(
         train_dataset,
@@ -134,6 +135,7 @@ def bubble_trainer():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size,
         step_size=FLAGS.step_size,
+        index_filter=None,
     )
     val_loader = DataLoader(
         val_dataset,
@@ -176,6 +178,7 @@ def bubble_trainer():
     model.to(device)
     WANDB.watch(model, log=None)
     
+    print("Device: {}".format(device))
     print('Model Architecture:\n%s' % model)
 
     criterion = nn.CrossEntropyLoss(reduction='mean')
@@ -187,16 +190,19 @@ def bubble_trainer():
     best_acc = 0.0
 
     try:
-        for epoch in range(FLAGS.epochs):
-            for phase in ('train', 'eval'):
-                if phase == 'train':
-                    model.train()
-                    dataset = train_dataset
-                    data_loader = train_loader
-                else:
-                    model.eval()
-                    dataset = val_dataset
-                    data_loader = val_loader
+        for phase in ('train', 'eval'):
+            if phase == 'train':
+                model.train()
+                dataset = train_dataset
+                data_loader = train_loader
+            else:
+                model.eval()
+                dataset = val_dataset
+                data_loader = val_loader
+            print("Length of dataset for {}: {} {} {}".format(
+                phase, dataset.size, dataset.start_time, dataset.end_time
+            ))
+            for epoch in range(FLAGS.epochs):
 
                 num_steps = len(data_loader)
                 running_loss = 0.0
@@ -231,9 +237,6 @@ def bubble_trainer():
                             loss_list.append(curr_loss)
                             corrects += torch.sum(preds == label.data)
 
-                        if loss > 55:
-                            import pdb
-                            pdb.set_trace()
 
                         if phase == 'train':
                             loss.backward()
@@ -272,8 +275,8 @@ def bubble_trainer():
                 epoch_loss = running_loss / len(dataset)
                 epoch_acc = running_corrects / len(dataset)
                 WANDB.log({"Epoch Training Accurancy": epoch_acc, "Epoch Training Loss": epoch_loss})
-                print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
-                            (epoch + 1, phase, epoch_acc, epoch_loss))
+                # print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
+                #             (epoch + 1, phase, epoch_acc, epoch_loss))
                 
                 if phase == 'eval':
                     if epoch_acc > best_acc:
