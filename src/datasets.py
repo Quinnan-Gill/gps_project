@@ -197,7 +197,7 @@ class BubbleDatasetFTP(Dataset):
         ).limit(scale).all(), dtype=np.float32)
         self.label = np.asarray(self.index_subquery.offset(
             self.index * scale
-        ).limit(scale).all()) + 1
+        ).limit(scale).all())
         self.values_set = True
      
     def _get_data_urls(

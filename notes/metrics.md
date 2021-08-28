@@ -6,6 +6,15 @@
 0.0 average = 6275.625968992248
 1.0 average = 170.05263157894737
 
+# Metrics for the Year 2016
+---- Starting Metrics ----
+Lap time: 1290.5998086929321
+--- Frequency of Types of Index ---
+{0: 645, 1: 644}
+--- Average Bubble Size ---
+0 average = 42394.303875968995
+1 average = 150.25155279503105
+
 
 ## Bad Old Metrics
 ---- Starting Metrics ----
