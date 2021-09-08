@@ -233,6 +233,8 @@ def bubble_trainer():
 
                             _, preds = torch.max(output, 1)
                             curr_loss = criterion(output, label.squeeze(1))
+                            if device == 'cuda:0':
+                                curr_loss = curr_loss.item()
                             loss += curr_loss
                             loss_list.append(curr_loss)
                             corrects += torch.sum(preds == label.data)
