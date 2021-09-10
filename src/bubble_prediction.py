@@ -25,7 +25,11 @@ from datasets import (
     IBI_MEASUREMENT,
     expand_measurements,
 )
-from rnn_modules import LSTMCell
+from rnn_modules import (
+    LSTMCell,
+    PeepholedLSTMCell,
+    CoupledLSTMCell,
+)
 
 import wandb
 
@@ -50,12 +54,14 @@ flags.DEFINE_string('message', '', 'Message for wandb')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
 flags.DEFINE_enum('rnn_module', 'lstm',
-                                    ['lstm'],
+                                    ['lstm', 'peep', 'coupled'],
                                     'Specifies the recurrent module in the RNN.')
 
 # RNN Modules for LSTM
 RNN_MODULES = {
-    'lstm': LSTMCell
+    'lstm': LSTMCell,
+    'peep': PeepholedLSTMCell,
+    'coupled': CoupledLSTMCell,
 }
 
 class BubblePredictor(nn.Module):
