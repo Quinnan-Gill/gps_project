@@ -46,6 +46,7 @@ flags.DEFINE_string('end_train_time', '2016_01_02', 'The end datetime for traini
 flags.DEFINE_string('start_val_time', '2017_01_01', 'The start datetime for evaluation')
 flags.DEFINE_string('end_val_time', '2017_01_02', 'The end datetime for evaluation')
 flags.DEFINE_integer('hidden_size', 50, 'Dimensionality for recurrent neuron.')
+flags.DEFINE_string('message', '', 'Message for wandb')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
 flags.DEFINE_enum('rnn_module', 'lstm',
@@ -161,11 +162,12 @@ def bubble_trainer():
 
     WANDB.init(
         project="research",
-        name="{}_{}_{}_{}".format(
+        name="{}_{}_{}_{}_{}".format(
             FLAGS.label,
             FLAGS.rnn_module,
             FLAGS.window_size,
-            FLAGS.step_size
+            FLAGS.step_size,
+            FLAGS.message,
         ),
         reinit=True
     )
