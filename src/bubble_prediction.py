@@ -213,7 +213,7 @@ def bubble_trainer():
                     total_step = epoch * len(data_loader) + step
 
                     sequences = sequences.to(device)
-                    labels = labels.to(device)
+                    labels = labels.to(device) + 1
 
                     optimizer.zero_grad()
 
@@ -224,8 +224,8 @@ def bubble_trainer():
                         _, l_w, _ = labels.shape
                         assert o_w == l_w
 
-                        loss = 0.0
-                        corrects = 0
+                        loss = torch.tensor(0.0).to(device)
+                        corrects = torch.tensor(0).to(device)
                         loss_list = []
                         for history in range(o_w):
                             output = outputs[:, history, :]
