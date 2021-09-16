@@ -221,7 +221,7 @@ def bubble_trainer():
                     total_step = epoch * len(data_loader) + step
 
                     sequences = sequences.to(device)
-                    labels = labels.to(device)
+                    labels = labels.to(device) + 1
 
                     optimizer.zero_grad()
 
