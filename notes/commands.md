@@ -27,3 +27,7 @@ The good stuff is on:
 ```
 bridges2-login013
 ```
+
+```
+python src/bubble_prediction.py --link --start_time=2016_01_01 --end_time=2016_12_31 --message=year
+```

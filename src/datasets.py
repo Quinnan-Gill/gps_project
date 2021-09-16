@@ -126,7 +126,8 @@ class BubbleDatasetFTP(Dataset):
         ).filter(
             and_(
                 DataMeasurement.timestamp >= self.start_time,
-                DataMeasurement.timestamp <= self.end_time
+                DataMeasurement.timestamp <= self.end_time,
+                DataMeasurement.bubble_index != -1
             )
         ).order_by(DataMeasurement.timestamp)
 
@@ -135,7 +136,8 @@ class BubbleDatasetFTP(Dataset):
         ).filter(
             and_(
                 DataMeasurement.timestamp >= self.start_time,
-                DataMeasurement.timestamp <= self.end_time
+                DataMeasurement.timestamp <= self.end_time,
+                DataMeasurement.bubble_index != -1
             )
         ).count()
 
