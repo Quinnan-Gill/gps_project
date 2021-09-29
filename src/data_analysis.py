@@ -3,6 +3,7 @@ import copy
 import os
 import sys
 import time
+import numpy as np
 
 from absl import app, flags
 from datetime import datetime
@@ -113,7 +114,7 @@ def bubble_classes(bubble_list):
             key, mean
         ))
 
-        stdev = sum((value - mean) ** 2)
+        stdev = sum((np.asarray(value) - mean) ** 2)
         stdev /= len(value)
         print("{} stdev = {}".format(
             key, stdev
