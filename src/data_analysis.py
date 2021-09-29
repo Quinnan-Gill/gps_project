@@ -107,11 +107,17 @@ def bubble_classes(bubble_list):
 
     print("--- Average Bubble Size ---")
     for key, value in bubble_size.items():
+        mean = sum(value) / len(value)
+
         print("{} average = {}".format(
-            key,
-            sum(value) / len(value)
+            key, mean
         ))
 
+        stdev = sum((value - mean) ** 2)
+        stdev /= len(value)
+        print("{} stdev = {}".format(
+            key, stdev
+        ))
 
 def find_bubble_frequency(metric_dataset):
     acc = Accummulator()

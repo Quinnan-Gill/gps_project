@@ -61,6 +61,9 @@ class DataMeasurement(Base):
     """
     TEC Data
     """
+    # Normalize them all together and encode them into a vector
+    # Use stacked LSTM to process the gps and then leo
+    # After two lstm results fuse and make decision
     gps_position1 = Column(Float)
     gps_position2 = Column(Float)
     gps_position3 = Column(Float)

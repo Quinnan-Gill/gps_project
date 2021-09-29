@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 
 from utils import (
     DATETIME_PSTR,
+    PredIndexAccuracy,
     _decode_time_str
 )
 from datasets import (
@@ -45,6 +46,7 @@ flags.DEFINE_string('experiment_name', 'exp', 'Defines experiment name.')
 flags.DEFINE_string('model_checkpoint', '',
                                         'Specifies the checkpont for analyzing.')
 flags.DEFINE_boolean('link', False, 'Links wandb account')
+flags.DEFINE_boolean('check_results', False, 'Does a (slow) sanity check on the data correctness')
 flags.DEFINE_string('start_train_time', '2016_01_01', 'The start datetime for training')
 flags.DEFINE_string('end_train_time', '2016_01_02', 'The end datetime for training')
 flags.DEFINE_string('start_val_time', '2017_01_01', 'The start datetime for evaluation')
@@ -216,12 +218,14 @@ def bubble_trainer():
                 running_loss = 0.0
                 running_corrects = 0
 
+                predindex = PredIndexAccuracy(device)
+
                 progress_bar = tqdm(enumerate(data_loader))
                 for step, (sequences, labels) in progress_bar:
                     total_step = epoch * len(data_loader) + step
 
                     sequences = sequences.to(device)
-                    labels = labels.to(device) + 1
+                    labels = labels.to(device)
 
                     optimizer.zero_grad()
 
@@ -246,7 +250,7 @@ def bubble_trainer():
                             loss += curr_loss
                             loss_list.append(curr_loss)
                             corrects += torch.sum(preds == label.data)
-
+                            predindex.update(preds, label.data)
 
                         if phase == 'train':
                             loss.backward()
@@ -263,6 +267,9 @@ def bubble_trainer():
                                     'Training Total Loss': loss.item(),
                                     'Training Accuracy': corrects.item() / (len(labels) * o_w),
                                     'Training Loss Per Chunk': loss.item() / o_w,
+                                    'Training Incorrect Zero Guesses': predindex.pred_incorrect_zeros,
+                                    'Training Correct Guesses': predindex.pred_correct,
+                                    'Training Incorrect One Guesses': predindex.pred_incorrect_ones,
                                 })
                             if torch.isnan(loss):
                                     # print("Gradient Explosion, restart run")
@@ -277,6 +284,9 @@ def bubble_trainer():
                                     'Eval Total Loss': loss.item(),
                                     'Eval Accuracy': corrects.item() / (len(labels) * o_w),
                                     'Eval Loss Per Chunk': loss.item() / o_w,
+                                    'Eval Incorrect Zero Guesses': predindex.pred_incorrect_zeros,
+                                    'Eval Correct Guesses': predindex.pred_correct,
+                                    'Eval Incorrect One Guesses': predindex.pred_incorrect_ones,
                                 })
                 
                     running_loss += loss.item() * sequences.size(0)
