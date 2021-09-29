@@ -108,14 +108,14 @@ def bubble_classes(bubble_list):
 
     print("--- Average Bubble Size ---")
     for key, value in bubble_size.items():
-        mean = sum(value) / len(value)
+        freq_np_array = np.asarray(value)
+        mean = np.mean(freq_np_array)
 
         print("{} average = {}".format(
             key, mean
         ))
 
-        stdev = sum((np.asarray(value) - mean) ** 2)
-        stdev /= len(value)
+        stdev = np.std(freq_np_array)
         print("{} stdev = {}".format(
             key, stdev
         ))
