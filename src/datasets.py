@@ -20,6 +20,7 @@ from sqlalchemy.inspection import inspect
 import pandas as pd
 
 from sql_models import (
+    DataPoint,
     ViresRequests,
     ViresMetaData,
     DataMeasurement,
@@ -362,137 +363,89 @@ class BubbleDataset(Dataset):
         window_size: int,
         step_size: int,
         shift: bool = True,
-        transform=None
+        prefetch: int = PRE_FETCH,
+        index_filter: List[int] = [-1],
+        maxfiles: int = 2000,
+        pos: int = 500,
+        satelite: str = "Sat_A",
     ):
         self.bubble_measurements = bubble_measurements
+
         self.start_time = start_time
         self.end_time = end_time
-        self.time_diff = timedelta(days=1)
+        self.prefetch = prefetch
+        self.index_filter = index_filter
+
         self.window_size = window_size
         self.step_size = step_size
-        self.transform = transform
 
-        if not os.path.exists(DATA_DIR):
-            os.makedirs(DATA_DIR)
-        
-        self.data = self._request_swarm_data()
+        history_cols = [
+            col for col in inspect(DataPoint).c
+            if col.name in expand_measurements(TEC_MEASUREMENTS)
+        ]
 
-        self.tec_data_df = self.data[expand_measurements(TEC_MEASUREMENTS)].to_numpy()
-        self.ibi_data_df = self.data[[self.bubble_measurements]].to_numpy()
-
-        if shift:
-            self.ibi_data_df += 1
-
-        if self.window_size != 0:
-            h, w = self.tec_data_df.shape
-            trim_h = h - (h % self.window_size)
-
-            self.tec_data_df = self.tec_data_df[:trim_h]
-            self.ibi_data_df = self.ibi_data_df[:trim_h]
-
-        return
-
-    def _request_swarm_data(self):
-        date_diff = self.end_time - self.start_time
-        start_time = self.start_time
-        end_time = self.start_time + self.time_diff
-
-        overall_data = None
-
-        for _ in range(date_diff.days):
-            data_file = os.path.join(
-                DATA_DIR,
-                "data_" + start_time.strftime("%Y_%m_%d_") + end_time.strftime("%Y_%m_%d.pickle")
-            )
-
-            if not os.path.exists(data_file):
-                tec_df = self._request_swarm_data_iter(
-                    TEC_COLLECTION,
-                    [m[0] for m in TEC_MEASUREMENTS],
-                    start_time,
-                    end_time
-                )
-
-                # Expand the GPS to three individual columns
-                gps_df = pd.DataFrame(tec_df.pop('GPS_Position').values.tolist(), index=tec_df.index)
-                tec_df = tec_df.join(gps_df.add_prefix('GPS_Position.')).sort_index(axis=1)
-                
-                # Expand the LEO position to three individual columns
-                leo_df = pd.DataFrame(tec_df.pop('LEO_Position').values.tolist(), index=tec_df.index)
-                tec_df = tec_df.join(leo_df.add_prefix('LEO_Position.')).sort_index(axis=1)
-
-                ibi_df = self._request_swarm_data_iter(
-                    IBI_COLLECTION,
-                    [self.bubble_measurements],
-                    start_time,
-                    end_time,
-                )
-
-                tec_df = self.normalize_cols(
-                    tec_df[expand_measurements(TEC_MEASUREMENTS)]
-                )
-                ibi_df = ibi_df[[self.bubble_measurements]]
-
-                data = pd.merge(tec_df, ibi_df, left_index=True, right_index=True)
-
-
-                print("------- Writing data to pickle file {}".format(data_file))
-                data.to_pickle(data_file)
-                print("------- Finished writing--------")
-            else:
-                # CSV file exists. Read the file
-                print("------- Reading data from pickle file {}".format(data_file))
-                data = pd.read_pickle(data_file)
-                print("------- Finished reading pick file ------")
-
-            if start_time == self.start_time:
-                overall_data = data
-
-            #update
-            start_time += self.time_diff
-            end_time += self.time_diff
-
-        return overall_data 
-        
-    def _request_swarm_data_iter(
-        self,
-        collection_type,
-        measurement_types,
-        start_time_iter,
-        end_time_iter,
-    ):
-        request = SwarmRequest()
-        request.set_collection(collection_type)
-        request.set_products(measurements=measurement_types)
-        data = request.get_between(
-            start_time_iter, end_time_iter
+        data_filter = and_(
+            DataPoint.timestamp >= self.start_time,
+            DataPoint.timestamp <= self.end_time,
+            DataPoint.bubble_index != -1
         )
 
-        return data.as_dataframe()
+        self.history_subquery = session.query(*history_cols).filter(
+            data_filter
+        )
 
-    def normalize_cols(self, df):
-        for col in df.columns:
-            df[col] = (df[col] / df[col].max()).astype(np.float32)
+        self.index_subquery = session.query(
+            DataPoint.bubble_index
+        ).filter(
+            data_filter
+        )
 
-        return df
+        self.size = session.query(
+            DataPoint
+        ).filter(
+            data_filter
+        ).count()
+
+        print("Data set is of size: {}".format(self.size))
 
     def __len__(self):
-        assert len(self.tec_data_df) == len(self.ibi_data_df)
+        if self.window_size == 0:
+            return self.size
 
-        return len(self.tec_data_df)
+        return self.size // self.window_size
 
     def __getitem__(self, index):
         if self.window_size == 0:
-            history = self.tec_data_df[index]
-            label   = self.ibi_data_df[index]
+            history = np.asarray(
+                self.history_subquery.filter_by(measurement_id=index).first(),
+                dtype=np.float32
+            )
+            label = np.asarray(
+                self.index_subquery.filter_by(measurement_id=index).first(),
+                dtype=np.float32
+            )
         else:
             start_index = (self.step_size * index)
-            end_index = start_index + self.window_size
+            end_index = (start_index + self.window_size)
 
-            history = self.tec_data_df[start_index:end_index]
-            label = self.ibi_data_df[start_index:end_index]
+            index_filter = and_(
+                DataPoint.measurement_id >= start_index,
+                DataPoint.measurement_id < end_index
+            )
 
-        if self.transform:
-            history = self.transform(history)
+            history = np.asarray(
+                self.history_subquery.filter(
+                    index_filter
+                ).all(),
+                dtype=np.float32
+            )
+            label = np.asarray(
+                self.index_subquery.filter(
+                    index_filter
+                ).all(),
+                dtype=np.float32
+            )
+
+            assert history.shape[0] == self.window_size, "{}: {}: {}".format(history.shape, index, (start_index, end_index))
 
         return history, label

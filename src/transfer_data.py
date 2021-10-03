@@ -50,6 +50,7 @@ while count < count_measures:
             prn=measure.prn,
             l1=measure.l1,
             l2=measure.l2,
+            bubble_index=measure.bubble_index,
         )
         # new_data.append(point)
         session.add(point)
