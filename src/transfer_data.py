@@ -21,12 +21,14 @@ value_subquery = (
     .order_by(DataMeasurement.timestamp)
 )
 
+print("Get count of measurements...")
 count_measures = value_subquery.count()
 
 scale = 30000
 index = 0
 count = 0
 
+print("Deleting old data...")
 session.query(DataPoint).delete()
 session.commit()
 
