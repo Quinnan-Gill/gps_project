@@ -52,15 +52,13 @@ class ViresMetaData(Base):
 
     request_id = Column(Integer, ForeignKey('vires_requests.request_id'))
 
-class DataMeasurement(Base):
-    __tablename__ = "data_measurement"
-    
-    measurement_id = Column(Integer, primary_key=True)
-    timestamp = Column(DateTime, primary_key=True)
+class DataObject(object):    
     
     """
     TEC Data
     """
+    measurement_id = Column(Integer, primary_key=True)
+
     # Normalize them all together and encode them into a vector
     # Use stacked LSTM to process the gps and then leo
     # After two lstm results fuse and make decision
@@ -82,10 +80,20 @@ class DataMeasurement(Base):
 
     bubble_index = Column(Integer)
 
+class DataMeasurement(Base, DataObject):
+    __tablename__ = "data_measurement"
+    timestamp = Column(DateTime, primary_key=True)
+
     """
     Relationships
     """
     meta_id = Column(Integer, ForeignKey("vires_meta_data.meta_id"))
+
+class DataPoint(Base, DataObject):
+    __tablename__ = "data_point"
+
+    timestamp = Column(DateTime)
+    
 
 # Create the tables
 Base.metadata.create_all(engine)

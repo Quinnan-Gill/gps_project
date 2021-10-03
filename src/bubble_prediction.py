@@ -84,7 +84,7 @@ class BubblePredictor(nn.Module):
             hidden_size=hidden_size,
             bias=bias
         )
-        self.bubble_prediction = nn.Linear(hidden_size, 3)
+        self.bubble_prediction = nn.Linear(hidden_size, 2)
 
         return
     

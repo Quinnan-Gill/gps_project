@@ -46,4 +46,16 @@ Window size and step size
 
 3. Look into any sensor changes / test how cache impl could be affecting it now
 
+4. Plot the magnitude of everything to see if it is garbage in vs garbage out to see if there are any jumps in magnitude
+cleaning step that we did not capture being
+
+X.Y.Z of gps and leo and plot so it looks like a wave form
+all should be a ciclical pattern (sin wave) with natural frequence of 90 minutes (noisier)
+
+timestamp as the x-axis and y-axis is L1 and L2 (focus on those)
+
+Reach out to Xinyi about the RNN and normalizing across all data and how it trains (final prediction)
+
+Find an example and try it out, see how the entire flow is working
+
 https://sites.wustl.edu/jeffheaton/t81-558/
