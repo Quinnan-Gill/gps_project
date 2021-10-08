@@ -10,6 +10,13 @@ from sql_models import (
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql.schema import ForeignKey
+from sqlalchemy.sql.sqltypes import BigInteger
+from sqlalchemy.sql.visitors import CloningExternalTraversal
 
 OUTPUTS = "./graphs/"
 
@@ -64,9 +71,14 @@ while index < count_measures:
 
     index += step_size
 
+session.close()
+
 x = measurement_points['timestamp']
 
 for c in list(point_list.keys()):
+    Session = sessionmaker(bind=engine)
+    Session.configure(bind=engine)
+    session = Session()
     if c == 'timestamp':
         continue
     y = measurement_points[c]
@@ -75,3 +87,4 @@ for c in list(point_list.keys()):
     plt.plot(x, y)
     plt.ylabel(c)
     plt.savefig(OUTPUTS + f'{c}.png')
+    session.close()
