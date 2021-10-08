@@ -48,11 +48,16 @@ count_measures = count_measures - (count_measures % step_size)
 
 print(f"Count Measures {count_measures}")
 
+session.close()
+
 index = 0
 measurement_points = pd.DataFrame(columns=column_headers)
 point_list = {}
 while index < count_measures:
     # print(index)
+    Session = sessionmaker(bind=engine)
+    Session.configure(bind=engine)
+    session = Session()
     point = value_subquery.offset(index).limit(1).first()
     point_list = {
         "timestamp": point.timestamp,
@@ -70,15 +75,12 @@ while index < count_measures:
     measurement_points = measurement_points.append(point_list, ignore_index=True)
 
     index += step_size
-
-session.close()
+    session.close()
 
 x = measurement_points['timestamp']
 
 for c in list(point_list.keys()):
-    Session = sessionmaker(bind=engine)
-    Session.configure(bind=engine)
-    session = Session()
+    
     if c == 'timestamp':
         continue
     y = measurement_points[c]
@@ -87,4 +89,3 @@ for c in list(point_list.keys()):
     plt.plot(x, y)
     plt.ylabel(c)
     plt.savefig(OUTPUTS + f'{c}.png')
-    session.close()
