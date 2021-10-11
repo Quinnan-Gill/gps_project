@@ -52,7 +52,7 @@ class ViresMetaData(Base):
 
     request_id = Column(Integer, ForeignKey('vires_requests.request_id'))
 
-class DataObject(object):    
+class DataObject(object): 
     
     """
     TEC Data

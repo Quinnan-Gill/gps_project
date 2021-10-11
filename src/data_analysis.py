@@ -137,7 +137,7 @@ def find_bubble_frequency(metric_dataset):
     bubble_classes(bubble_list)
     
 def get_data_metrics():
-    metric_dataset = BubbleDataset(
+    metric_dataset = BubbleDatasetFTP(
         start_time=_decode_time_str(FLAGS.start_time),
         end_time=_decode_time_str(FLAGS.end_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
