@@ -381,26 +381,6 @@ class BubbleDataset(Dataset):
         self.window_size = window_size
         self.step_size = step_size
 
-        tec_url, v_tec_req = self._get_data_request(
-            maxfiles=maxfiles,
-            pos=pos,
-            measurement="TEC",
-            satelite=satelite,
-        )
-        if not v_tec_req.overall_processed:
-            self._get_data_urls(tec_url, v_tec_req)
-
-        ibi_url, v_ibi_req = self._get_data_request(
-            maxfiles=maxfiles,
-            pos=pos,
-            measurement="IBI",
-            satelite=satelite,
-        )
-        if not v_ibi_req.overall_processed:
-            self._get_data_urls(ibi_url, v_ibi_req)
-
-        self._get_data_range()
-
         history_cols = [
             col for col in inspect(DataMeasurement).c
             if col.name in expand_measurements(TEC_MEASUREMENTS)
@@ -459,7 +439,7 @@ class BubbleDataset(Dataset):
                 )
 
                 self.history.append(temp_history)
-                self.index_subquery(temp_label)
+                self.label.append(temp_label)
 
     def __len__(self):
         if self.window_size == 0:
