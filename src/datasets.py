@@ -9,6 +9,7 @@ import tempfile
 import json
 import zipfile
 import shutil
+import zarr
 
 import numpy as np
 from sqlalchemy.sql.functions import func
@@ -406,7 +407,41 @@ class BubbleDataset(Dataset):
             data_filter
         ).count()
 
+        self.history = None
+        self.label = None
+        self.__cache_data(10)
+
+        import pdb
+        pdb.set_trace()
+
         print("Data set is of size: {}".format(self.size))
+
+    def __cache_data(self, chunk_size):
+        offset = self.size // chunk_size
+
+        for i in range(chunk_size):
+            if not (
+                isinstance(self.history, zarr.core.Array)
+                or isinstance(self.label, zarr.core.Array)
+            ):
+                self.history = zarr.array(
+                    self.history_subquery.offset(offset * i).limit(offset * (i+1)).all()
+                )
+                self.label = zarr.array(
+                    self.index_subquery.offset(offset * i).limit(offset * (i+1)).all()
+                )
+            else:
+                temp_history = zarr.array(
+                    self.history_subquery.offset(offset * i).limit(offset * (i+1)).all()
+                )
+                temp_label = zarr.array(
+                    self.index_subquery.offset(offset * i).limit(offset * (i+1)).all()
+                )
+
+                self.history.append(temp_history)
+                self.index_subquery(temp_label)
+        
+            
 
     def __len__(self):
         if self.window_size == 0:
