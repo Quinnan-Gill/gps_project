@@ -377,32 +377,55 @@ class BubbleDataset(Dataset):
         self.prefetch = prefetch
         self.index_filter = index_filter
 
+        self.time_diff = timedelta(days=1)
         self.window_size = window_size
         self.step_size = step_size
 
+        tec_url, v_tec_req = self._get_data_request(
+            maxfiles=maxfiles,
+            pos=pos,
+            measurement="TEC",
+            satelite=satelite,
+        )
+        if not v_tec_req.overall_processed:
+            self._get_data_urls(tec_url, v_tec_req)
+
+        ibi_url, v_ibi_req = self._get_data_request(
+            maxfiles=maxfiles,
+            pos=pos,
+            measurement="IBI",
+            satelite=satelite,
+        )
+        if not v_ibi_req.overall_processed:
+            self._get_data_urls(ibi_url, v_ibi_req)
+
+        self._get_data_range()
+
         history_cols = [
-            col for col in inspect(DataPoint).c
+            col for col in inspect(DataMeasurement).c
             if col.name in expand_measurements(TEC_MEASUREMENTS)
         ]
 
         data_filter = and_(
-            DataPoint.timestamp >= self.start_time,
-            DataPoint.timestamp <= self.end_time,
-            DataPoint.bubble_index != -1
+            DataMeasurement.timestamp >= self.start_time,
+            DataMeasurement.timestamp <= self.end_time,
+            DataMeasurement.bubble_index != -1
         )
 
         self.history_subquery = session.query(*history_cols).filter(
             data_filter
+        ).order_by(
+            DataMeasurement.timestamp
         )
 
         self.index_subquery = session.query(
-            DataPoint.bubble_index
+            DataMeasurement.bubble_index
         ).filter(
             data_filter
-        )
+        ).order_by(DataMeasurement.timestamp)
 
         self.size = session.query(
-            DataPoint
+            DataMeasurement
         ).filter(
             data_filter
         ).count()
@@ -410,9 +433,6 @@ class BubbleDataset(Dataset):
         self.history = None
         self.label = None
         self.__cache_data(10)
-
-        import pdb
-        pdb.set_trace()
 
         print("Data set is of size: {}".format(self.size))
 
@@ -440,8 +460,6 @@ class BubbleDataset(Dataset):
 
                 self.history.append(temp_history)
                 self.index_subquery(temp_label)
-        
-            
 
     def __len__(self):
         if self.window_size == 0:
