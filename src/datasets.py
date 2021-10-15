@@ -9,7 +9,7 @@ import tempfile
 import json
 import zipfile
 import shutil
-import zarr
+import dask.array as da
 
 import numpy as np
 from sqlalchemy.sql.functions import func
@@ -381,7 +381,7 @@ class BubbleDataset(Dataset):
         self.window_size = window_size
         self.step_size = step_size
 
-        history_cols = [
+        self.history_cols = [
             col for col in inspect(DataMeasurement).c
             if col.name in expand_measurements(TEC_MEASUREMENTS)
         ]
@@ -392,7 +392,7 @@ class BubbleDataset(Dataset):
             DataMeasurement.bubble_index != -1
         )
 
-        self.history_subquery = session.query(*history_cols).filter(
+        self.history_subquery = session.query(*self.history_cols).filter(
             data_filter
         ).order_by(
             DataMeasurement.timestamp
@@ -419,27 +419,34 @@ class BubbleDataset(Dataset):
     def __cache_data(self, chunk_size):
         offset = self.size // chunk_size
 
-        for i in range(chunk_size):
+        chunk_length = self.window_size*2 if self.window_size != 0 else PRE_FETCH
+
+        for i in range(chunk_size+1):
             if not (
-                isinstance(self.history, zarr.core.Array)
-                or isinstance(self.label, zarr.core.Array)
+                isinstance(self.history, da.core.Array)
+                or isinstance(self.label, da.core.Array)
             ):
-                self.history = zarr.array(
-                    self.history_subquery.offset(offset * i).limit(offset * (i+1)).all()
+                self.history = da.from_array(
+                    self.history_subquery.offset(offset * i).limit(offset * (i+1)).all(),
+                    chunks=(chunk_length, len(self.history_cols))
                 )
-                self.label = zarr.array(
-                    self.index_subquery.offset(offset * i).limit(offset * (i+1)).all()
+                self.label = da.from_array(
+                    self.index_subquery.offset(offset * i).limit(offset * (i+1)).all(),
+                    chunks=(chunk_length, 1)
                 )
             else:
-                temp_history = zarr.array(
-                    self.history_subquery.offset(offset * i).limit(offset * (i+1)).all()
+                temp_history = da.from_array(
+                    self.history_subquery.offset(offset * i).limit(offset).all(),
+                    chunks=(chunk_length, len(self.history_cols))
                 )
-                temp_label = zarr.array(
-                    self.index_subquery.offset(offset * i).limit(offset * (i+1)).all()
+                temp_label = da.from_array(
+                    self.index_subquery.offset(offset * i).limit(offset).all(),
+                    chunks=(chunk_length, 1)
                 )
 
-                self.history.append(temp_history)
-                self.label.append(temp_label)
+                self.history = da.append(self.history, temp_history, axis=0)
+                self.label = da.append(self.label, temp_label, axis=0)
+            print("Chunk {} Size: {}".format(i, self.history.shape))
 
     def __len__(self):
         if self.window_size == 0:
@@ -449,14 +456,8 @@ class BubbleDataset(Dataset):
 
     def __getitem__(self, index):
         if self.window_size == 0:
-            history = np.asarray(
-                self.history_subquery.filter_by(measurement_id=index).first(),
-                dtype=np.float32
-            )
-            label = np.asarray(
-                self.index_subquery.filter_by(measurement_id=index).first(),
-                dtype=np.float32
-            )
+            history = self.history[index].compute()
+            label = self.label[index].compute()
         else:
             start_index = (self.step_size * index)
             end_index = (start_index + self.window_size)

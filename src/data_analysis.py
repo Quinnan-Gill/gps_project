@@ -5,6 +5,7 @@ import sys
 import time
 import numpy as np
 
+from tqdm import tqdm
 from absl import app, flags
 from datetime import datetime
 
@@ -125,10 +126,11 @@ def find_bubble_frequency(metric_dataset):
 
     start_time = time.time()
     print("---- Starting Metrics ----")
-    for i in range(len(metric_dataset)):
-        _, label = metric_dataset[i]
+    progress_bar = tqdm(range(len(metric_dataset)))
+    for step in progress_bar:
+        _, label = metric_dataset[step]
 
-        acc.value_iter(i, label[0])
+        acc.value_iter(step, label)
     lap_time = time.time() - start_time
     print("Lap time: {}".format(lap_time))
     
