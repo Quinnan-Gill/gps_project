@@ -446,6 +446,10 @@ class BubbleDataset(Dataset):
 
                 self.history = da.append(self.history, temp_history, axis=0)
                 self.label = da.append(self.label, temp_label, axis=0)
+
+                del(temp_history)
+                del(temp_label)
+
             print("Chunk {} Size: {}".format(i, self.history.shape))
 
     def __len__(self):
