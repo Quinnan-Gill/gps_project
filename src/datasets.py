@@ -466,23 +466,8 @@ class BubbleDataset(Dataset):
             start_index = (self.step_size * index)
             end_index = (start_index + self.window_size)
 
-            index_filter = and_(
-                DataPoint.measurement_id >= start_index,
-                DataPoint.measurement_id < end_index
-            )
-
-            history = np.asarray(
-                self.history_subquery.filter(
-                    index_filter
-                ).all(),
-                dtype=np.float32
-            )
-            label = np.asarray(
-                self.index_subquery.filter(
-                    index_filter
-                ).all(),
-                dtype=np.float32
-            )
+            history = self.history[start_index:end_index].compute().astype(np.float32)
+            label = self.label[start_index:end_index].compute()
 
             assert history.shape[0] == self.window_size, "{}: {}: {}".format(history.shape, index, (start_index, end_index))
 

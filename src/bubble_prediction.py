@@ -123,7 +123,7 @@ def bubble_trainer():
     else:
         WANDB = MagicMock()
 
-    train_dataset = BubbleDatasetFTP(
+    train_dataset = BubbleDataset(
         start_time=_decode_time_str(FLAGS.start_train_time),
         end_time=_decode_time_str(FLAGS.end_train_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
@@ -138,7 +138,7 @@ def bubble_trainer():
         num_workers=1
     )
     
-    val_dataset = BubbleDatasetFTP(
+    val_dataset = BubbleDataset(
         start_time=_decode_time_str(FLAGS.start_val_time),
         end_time=_decode_time_str(FLAGS.end_val_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
