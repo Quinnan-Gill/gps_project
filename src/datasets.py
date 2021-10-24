@@ -46,7 +46,7 @@ IBI_MEASUREMENT = {
 CDF_EPOCH_1970 = 62167219200000.0
 
 ZIP_TIME_FMT = "%Y%m%dT%H%M%S"
-PRE_FETCH = 500
+PRE_FETCH = 5000
 
 URL = "https://swarm-diss.eo.esa.int/?do=list&maxfiles={maxfiles}&pos={pos}&file=swarm%2FLevel2daily%2FEntire_mission_data%2F{measurement}%2FTMS%2F{sat}"
 # URL = "https://swarm-diss.eo.esa.int/#swarm%2FLevel2daily%2FEntire_mission_data%2FTEC%2FTMS%2FSat_{}"
@@ -354,6 +354,29 @@ class BubbleDatasetFTP(Dataset):
 
         return history, label
 
+class SmartList:
+    def __init__(self, zarr_list, window_size=None):
+        self.start = len(zarr_list) + 1
+        self.end = -1
+        self.zarr_list = zarr_list
+        self.cache_list = []
+        self.window_size = window_size if window_size == None else PRE_FETCH
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            index_low  = index.start
+            index_high = index.stop
+        elif isinstance(index, int):
+            index_low  = index
+            index_high = index
+        
+        if index_low < self.start or index_high > self.end:
+            self.start = max(0, index_low - self.window_size)
+            self.end = min(len(self.zarr_list), index_high + self.window_size)
+
+            self.cache_list = self.zarr_list[self.start:self.end].compute()
+
+        return self.cache_list[index_low-self.start:index_high-self.start]
 
 class BubbleDataset(Dataset):
     def __init__(
@@ -451,6 +474,9 @@ class BubbleDataset(Dataset):
                 del(temp_label)
 
             print("Chunk {} Size: {}".format(i, self.history.shape))
+        
+        self.history = SmartList(self.history, self.prefetch)
+        self.label = SmartList(self.label, self.prefetch)
 
     def __len__(self):
         if self.window_size == 0:
@@ -466,8 +492,8 @@ class BubbleDataset(Dataset):
             start_index = (self.step_size * index)
             end_index = (start_index + self.window_size)
 
-            history = self.history[start_index:end_index].compute().astype(np.float32)
-            label = self.label[start_index:end_index].compute()
+            history = self.history[start_index:end_index].astype(np.float32)
+            label = self.label[start_index:end_index]
 
             assert history.shape[0] == self.window_size, "{}: {}: {}".format(history.shape, index, (start_index, end_index))
 
