@@ -362,6 +362,8 @@ class SmartList:
         self.cache_list = []
         self.window_size = window_size if window_size == None else PRE_FETCH
 
+        print(f"Window Size: {self.window_size}")
+
     def __getitem__(self, index):
         if isinstance(index, slice):
             index_low  = index.start
