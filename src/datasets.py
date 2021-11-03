@@ -360,9 +360,9 @@ class SmartList:
         self.end = -1
         self.zarr_list = zarr_list
         self.cache_list = []
-        self.window_size = window_size if window_size == None else PRE_FETCH
+        self.window_size = window_size if window_size != None else PRE_FETCH
 
-        print(f"Window Size: {self.window_size}")
+        print(f"Window: {self.window_size}")
 
     def __getitem__(self, index):
         if isinstance(index, slice):
