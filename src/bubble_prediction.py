@@ -52,6 +52,7 @@ flags.DEFINE_string('end_train_time', '2016_01_02', 'The end datetime for traini
 flags.DEFINE_string('start_val_time', '2017_01_01', 'The start datetime for evaluation')
 flags.DEFINE_string('end_val_time', '2017_01_02', 'The end datetime for evaluation')
 flags.DEFINE_integer('hidden_size', 50, 'Dimensionality for recurrent neuron.')
+flags.DEFINE_integer('prefetch', 5000, 'How much to cache for the data')
 flags.DEFINE_string('message', '', 'Message for wandb')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
@@ -130,6 +131,7 @@ def bubble_trainer():
         window_size=FLAGS.window_size,
         step_size=FLAGS.step_size,
         index_filter=None,
+        prefetch=FLAGS.prefetch,
     )
     train_loader = DataLoader(
         train_dataset,
@@ -145,6 +147,7 @@ def bubble_trainer():
         window_size=FLAGS.window_size,
         step_size=FLAGS.step_size,
         index_filter=None,
+        prefetch=FLAGS.prefetch
     )
     val_loader = DataLoader(
         val_dataset,
