@@ -295,8 +295,8 @@ def bubble_trainer():
                     running_loss += loss.item() * sequences.size(0)
                     running_corrects += corrects
 
-                epoch_loss = running_loss / len(dataset)
-                epoch_acc = running_corrects / len(dataset)
+                epoch_loss = running_loss
+                epoch_acc = running_corrects
                 WANDB.log({"Epoch Training Accurancy": epoch_acc, "Epoch Training Loss": epoch_loss})
                 # print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
                 #             (epoch + 1, phase, epoch_acc, epoch_loss))

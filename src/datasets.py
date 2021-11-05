@@ -484,7 +484,7 @@ class BubbleDataset(Dataset):
         if self.window_size == 0:
             return self.size
 
-        return self.size // self.window_size
+        return self.size // self.step_size
 
     def __getitem__(self, index):
         if self.window_size == 0:
