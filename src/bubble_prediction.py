@@ -170,6 +170,7 @@ def bubble_trainer():
                 num_steps = len(data_loader)
                 running_loss = 0.0
                 running_corrects = 0
+                running_count = 0
 
                 predindex = PredIndexAccuracy(device)
 
@@ -192,6 +193,7 @@ def bubble_trainer():
                         loss = torch.tensor(0.0).to(device)
                         corrects = torch.tensor(0).to(device)
                         loss_list = []
+                        running_count += o_w
                         for history in range(o_w):
                             output = outputs[:, history, :]
                             label = labels[:, history, :]
@@ -220,9 +222,9 @@ def bubble_trainer():
                                     'Training Total Loss': loss.item(),
                                     'Training Accuracy': corrects.item() / (len(labels) * o_w),
                                     'Training Loss Per Chunk': loss.item() / o_w,
-                                    'Training Incorrect Zero Guesses': predindex.pred_incorrect_zeros,
-                                    'Training Correct Guesses': predindex.pred_correct,
-                                    'Training Incorrect One Guesses': predindex.pred_incorrect_ones,
+                                    'Training Incorrect Zero Guesses': predindex.pred_incorrect_zeros / running_count,
+                                    'Training Correct Guesses': predindex.pred_correct / running_count,
+                                    'Training Incorrect One Guesses': predindex.pred_incorrect_ones / running_count,
                                 })
                             if torch.isnan(loss):
                                     # print("Gradient Explosion, restart run")
