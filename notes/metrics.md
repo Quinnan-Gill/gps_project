@@ -59,3 +59,5 @@ Reach out to Xinyi about the RNN and normalizing across all data and how it trai
 Find an example and try it out, see how the entire flow is working
 
 https://sites.wustl.edu/jeffheaton/t81-558/
+
+Ending sentence no likely match possibly orbital location (logitude point)

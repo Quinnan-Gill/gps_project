@@ -31,6 +31,7 @@ from rnn_modules import (
     PeepholedLSTMCell,
     CoupledLSTMCell,
 )
+from models import BubblePredictor
 
 import wandb
 
@@ -66,57 +67,6 @@ RNN_MODULES = {
     'peep': PeepholedLSTMCell,
     'coupled': CoupledLSTMCell,
 }
-
-class BubblePredictor(nn.Module):
-
-    def __init__(
-        self,
-        rnn_module,
-        hidden_size,
-        bias=False,
-    ):
-        super().__init__()
-        self.rnn_module = rnn_module
-        self.hidden_size = hidden_size
-        self.bias = bias
-
-        self.rnn_module = self.rnn_module(
-            input_size=len(expand_measurements(TEC_MEASUREMENTS)),
-            hidden_size=hidden_size,
-            bias=bias
-        )
-        self.bubble_prediction = nn.Linear(hidden_size, 2)
-
-        return
-    
-    def forward(self, history, state=None):
-        batch_size, history_steps, _ = history.shape
-
-        logits = None
-        logit_set = False
-
-        for step in range(history_steps):
-            state = self.rnn_module(history[:, step, :], state)
-        
-            if isinstance(state, tuple):
-                outputs, _ = state
-            else:
-                outputs = state
-            
-            pred = self.bubble_prediction(outputs).unsqueeze(1)
-            
-            if not logit_set:
-                logits = pred
-                logit_set = True
-            else:
-                logits = torch.cat((logits, pred), 1)
-        return logits, state
-
-    def reset_parameters(self):
-        with torch.no_grad:
-            for param in self.parameters():
-                param.reset_parameters()
-        return
 
 def bubble_trainer():
     if FLAGS.link:
@@ -285,7 +235,7 @@ def bubble_trainer():
                             if step % 10 == 0:
                                 WANDB.log({
                                     'Eval Total Loss': loss.item(),
-                                    'Eval Accuracy': corrects.item() / (len(labels) * o_w),
+                                    'Eval Accuracy': corrects.item(),
                                     'Eval Loss Per Chunk': loss.item() / o_w,
                                     'Eval Incorrect Zero Guesses': predindex.pred_incorrect_zeros,
                                     'Eval Correct Guesses': predindex.pred_correct,
@@ -297,7 +247,8 @@ def bubble_trainer():
 
                 epoch_loss = running_loss
                 epoch_acc = running_corrects
-                WANDB.log({"Epoch Training Accurancy": epoch_acc, "Epoch Training Loss": epoch_loss})
+                if phase == 'train':
+                    WANDB.log({"Epoch Training Accurancy": epoch_acc, "Epoch Training Loss": epoch_loss})
                 # print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
                 #             (epoch + 1, phase, epoch_acc, epoch_loss))
                 

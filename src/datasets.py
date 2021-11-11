@@ -439,6 +439,9 @@ class BubbleDataset(Dataset):
         self.label = None
         self.__cache_data(10)
 
+        # import pdb
+        # pdb.set_trace()
+
         print("Data set is of size: {}".format(self.size))
 
     def __cache_data(self, chunk_size):
@@ -484,7 +487,11 @@ class BubbleDataset(Dataset):
         if self.window_size == 0:
             return self.size
 
-        return self.size // self.step_size
+        # have uniform windows
+        length = self.size - (self.size % self.window_size)
+        length -= self.window_size
+
+        return length // self.step_size
 
     def __getitem__(self, index):
         if self.window_size == 0:
