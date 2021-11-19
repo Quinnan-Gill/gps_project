@@ -406,9 +406,13 @@ class BubbleDataset(Dataset):
         self.window_size = window_size
         self.step_size = step_size
 
+        hist_col_names = expand_measurements(TEC_MEASUREMENTS)
+
+        # hist_col_names = ["timestamp"] + hist_col_names
+
         self.history_cols = [
             col for col in inspect(DataMeasurement).c
-            if col.name in expand_measurements(TEC_MEASUREMENTS)
+            if col.name in hist_col_names
         ]
 
         data_filter = and_(

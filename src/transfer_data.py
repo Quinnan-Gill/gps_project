@@ -1,62 +1,70 @@
-from sqlalchemy.inspection import inspect
-
-from sql_models import (
-    ViresRequests,
-    ViresMetaData,
-    DataMeasurement,
-    DataPoint,
-    session,
-    engine
-)
 from tqdm import tqdm
+from absl import app, flags
+from torch.utils.data import DataLoader
 
-wanted_cols = [
-    col for col in inspect(DataMeasurement).c
-    if col.name != "measurement_id"
-]
-
-value_subquery = (
-    session.query(DataMeasurement)
-    .filter(DataMeasurement.bubble_index != -1)
-    .order_by(DataMeasurement.timestamp)
+from utils import _decode_time_str
+from datasets import (
+    BubbleDataset,
+    BubbleDatasetFTP,
+    TEC_MEASUREMENTS,
+    IBI_MEASUREMENT,
+    expand_measurements,
 )
 
-print("Get count of measurements...")
-count_measures = value_subquery.count()
+FLAGS = flags.FLAGS
 
-scale = 30000
-index = 0
-count = 0
 
-print("Deleting old data...")
-session.query(DataPoint).delete()
-session.commit()
+flags.DEFINE_float('learning_rate', 1e-3, 'Learning rate.')
+flags.DEFINE_float('weight_decay', 0, 'Weight decay (L2 regularization).')
+flags.DEFINE_integer('batch_size', 2048, 'Number of examples per batch.')
+flags.DEFINE_integer('epochs', 20, 'Number of epochs for training.')
+flags.DEFINE_integer('window_size', 120, 'How large the time window will be')
+flags.DEFINE_integer('step_size', 120, 'How much the window shifts')
+flags.DEFINE_string('experiment_name', 'exp', 'Defines experiment name.')
+flags.DEFINE_string('model_checkpoint', '',
+                                        'Specifies the checkpont for analyzing.')
+flags.DEFINE_boolean('link', False, 'Links wandb account')
+flags.DEFINE_boolean('check_results', False, 'Does a (slow) sanity check on the data correctness')
+flags.DEFINE_string('start_train_time', '2016_01_01', 'The start datetime for training')
+flags.DEFINE_string('end_train_time', '2016_01_02', 'The end datetime for training')
+flags.DEFINE_string('start_val_time', '2017_01_01', 'The start datetime for evaluation')
+flags.DEFINE_string('end_val_time', '2017_01_02', 'The end datetime for evaluation')
+flags.DEFINE_integer('hidden_size', 50, 'Dimensionality for recurrent neuron.')
+flags.DEFINE_integer('prefetch', 5000, 'How much to cache for the data')
+flags.DEFINE_string('message', '', 'Message for wandb')
+flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
+                    'Specifies the label for calculating the loss')
+flags.DEFINE_enum('rnn_module', 'lstm',
+                                    ['lstm', 'peep', 'coupled'],
+                                    'Specifies the recurrent module in the RNN.')
 
-while count < count_measures:
-    bulk_list = value_subquery.offset(index * scale).limit(scale).all()
 
-    new_data = []
-    progress_bar = tqdm(enumerate(bulk_list))
-    for step, measure in progress_bar:
-        point = DataPoint(
-            measurement_id=count,
-            timestamp=measure.timestamp,
-            gps_position1=measure.gps_position1,
-            gps_position2=measure.gps_position2,
-            gps_position3=measure.gps_position3,
-            leo_position1=measure.leo_position1,
-            leo_position2=measure.leo_position2,
-            leo_position3=measure.leo_position3,
-            prn=measure.prn,
-            l1=measure.l1,
-            l2=measure.l2,
-            bubble_index=measure.bubble_index,
-        )
-        # new_data.append(point)
-        session.add(point)
-        count += 1
-        progress_bar.set_description(
-            'Step: %d/%d, Completion: %d/%d: %d%%' % (step, scale, count, count_measures, (count * 100) // count_measures)
-        )
-    session.commit()
-    index += 1
+def stream_dataset():
+    train_dataset = BubbleDataset(
+        start_time=_decode_time_str(FLAGS.start_train_time),
+        end_time=_decode_time_str(FLAGS.end_train_time),
+        bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
+        window_size=FLAGS.window_size,
+        step_size=FLAGS.step_size,
+        index_filter=None,
+        prefetch=FLAGS.prefetch,
+    )
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=FLAGS.batch_size,
+        shuffle=False,
+        num_workers=1
+    )
+    data_loader = train_loader
+
+    progress_bar = tqdm(enumerate(data_loader))
+    for step, (sequences, labels) in progress_bar:
+        import pdb
+        pdb.set_trace()
+
+
+def main(unused_argvs):
+    stream_dataset()
+
+if __name__ == '__main__':
+    app.run(main)

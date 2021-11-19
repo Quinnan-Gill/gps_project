@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import List
 
 from sqlalchemy.sql.expression import label
 import torch
+from torch.tensor import Tensor
 
 # Dateime Parsing String
 DATETIME_PSTR = '%Y_%m_%d'
@@ -39,3 +41,10 @@ class PredIndexAccuracy(object):
             # prediction was 1 but label was 0
             # therefore (1 - 0) + 1 == 2
             self.pred_incorrect_ones += bincount[2]
+
+
+class RunResults(object):
+    def __init__(self, device):
+        self.loss: Tensor = torch.tensor(0.0).to(device)
+        self.corrects: Tensor = torch.tensor(0).to(device)
+        loss_list: List[Tensor] = []

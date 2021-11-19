@@ -190,22 +190,15 @@ def bubble_trainer():
                         _, l_w, _ = labels.shape
                         assert o_w == l_w
 
-                        loss = torch.tensor(0.0).to(device)
-                        corrects = torch.tensor(0).to(device)
-                        loss_list = []
                         running_count += o_w
-                        for history in range(o_w):
-                            output = outputs[:, history, :]
-                            label = labels[:, history, :]
-
-                            _, preds = torch.max(output, 1)
-                            curr_loss = criterion(output, label.squeeze(1))
-                            if device == 'cuda:0':
-                                curr_loss = curr_loss.item()
-                            loss += curr_loss
-                            loss_list.append(curr_loss)
-                            corrects += torch.sum(preds == label.data)
-                            predindex.update(preds, label.data)
+                        output_eval = model.evaluate_output(
+                            outputs,
+                            labels,
+                            criterion,
+                            predindex
+                        )
+                        loss = output_eval.loss
+                        corrects = output_eval.corrects
 
                         if phase == 'train':
                             loss.backward()
