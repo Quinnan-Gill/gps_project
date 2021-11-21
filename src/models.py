@@ -65,7 +65,7 @@ class BubblePredictor(nn.Module):
                         labels,
                         criterion,
                         predindex,
-                        phase):
+                        loss):
 
         device = self.__get_device()
 
@@ -73,7 +73,7 @@ class BubblePredictor(nn.Module):
         _, label_width, _ = labels.shape
         assert ouput_width == label_width
 
-        results = RunResults(device, phase)
+        results = RunResults(device)
 
         for history in range(ouput_width):
             output = outputs[:, history, :]
@@ -85,11 +85,11 @@ class BubblePredictor(nn.Module):
             if device == 'cuda':
                 curr_loss = curr_loss.item()
 
-            results.loss += curr_loss
+            loss += curr_loss
             results.corrects += torch.sum(preds == label.data)
             predindex.update(preds, label.data)
 
-        return results
+        return results, loss
 
     def reset_parameters(self):
         with torch.no_grad:
