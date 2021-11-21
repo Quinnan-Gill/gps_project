@@ -67,31 +67,32 @@ class BubblePredictor(nn.Module):
                         predindex,
                         phase):
 
-        with torch.set_grad_enabled(phase == 'train'):
-            device = self.__get_device()
+        device = self.__get_device()
 
-            _, ouput_width, _ = outputs.shape
-            _, label_width, _ = labels.shape
-            assert ouput_width == label_width
+        _, ouput_width, _ = outputs.shape
+        _, label_width, _ = labels.shape
+        assert ouput_width == label_width
 
-            results = RunResults(device)
+        results = RunResults(device)
 
-            loss = torch.tensor(0.0).to(device)
-            for history in range(ouput_width):
-                output = outputs[:, history, :]
-                label = labels[:, history, :]
+        loss = torch.tensor(0.0).to(device)
+        if phase == 'train':
+            loss.requires_grad = True
+        for history in range(ouput_width):
+            output = outputs[:, history, :]
+            label = labels[:, history, :]
 
-                _, preds = torch.max(output, 1)
-                curr_loss = criterion(output, label.squeeze(1))
+            _, preds = torch.max(output, 1)
+            curr_loss = criterion(output, label.squeeze(1))
 
-                if device == 'cuda':
-                    curr_loss = curr_loss.item()
+            if device == 'cuda':
+                curr_loss = curr_loss.item()
 
-                loss += curr_loss
-                results.corrects += torch.sum(preds == label.data)
-                predindex.update(preds, label.data)
+            loss = loss + curr_loss
+            results.corrects += torch.sum(preds == label.data)
+            predindex.update(preds, label.data)
 
-            return results, loss
+        return results, loss
 
     def reset_parameters(self):
         with torch.no_grad:
