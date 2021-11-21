@@ -47,4 +47,4 @@ class RunResults(object):
     def __init__(self, device):
         self.loss: Tensor = torch.tensor(0.0).to(device)
         self.corrects: Tensor = torch.tensor(0).to(device)
-        loss_list: List[Tensor] = []
+        self.loss_list: List[Tensor] = []

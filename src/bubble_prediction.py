@@ -195,13 +195,13 @@ def bubble_trainer():
                             outputs,
                             labels,
                             criterion,
-                            predindex
+                            predindex,
+                            phase
                         )
                         loss = output_eval.loss
                         corrects = output_eval.corrects
 
                         if phase == 'train':
-                            loss.requires_grad = True
                             loss.backward()
                             optimizer.step()
 
@@ -214,6 +214,7 @@ def bubble_trainer():
                             if step % 10 == 0:
                                 WANDB.log({
                                     'Training Total Loss': loss.item(),
+                                    'Training Total Accuracy': corrects.item(),
                                     'Training Accuracy': corrects.item() / (len(labels) * o_w),
                                     'Training Loss Per Chunk': loss.item() / o_w,
                                     'Training Incorrect Zero Guesses': predindex.pred_incorrect_zeros / running_count,

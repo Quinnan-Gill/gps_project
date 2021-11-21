@@ -64,31 +64,33 @@ class BubblePredictor(nn.Module):
                         outputs,
                         labels,
                         criterion,
-                        predindex):
+                        predindex,
+                        phase):
 
-        device = self.__get_device()
+        with torch.set_grad_enabled(phase == 'train'):
+            device = self.__get_device()
 
-        _, ouput_width, _ = outputs.shape
-        _, label_width, _ = labels.shape
-        assert ouput_width == label_width
+            _, ouput_width, _ = outputs.shape
+            _, label_width, _ = labels.shape
+            assert ouput_width == label_width
 
-        results = RunResults(device)
+            results = RunResults(device)
 
-        for history in range(ouput_width):
-            output = outputs[:, history, :]
-            label = labels[:, history, :]
+            for history in range(ouput_width):
+                output = outputs[:, history, :]
+                label = labels[:, history, :]
 
-            _, preds = torch.max(output, 1)
-            curr_loss = criterion(output, label.squeeze(1))
+                _, preds = torch.max(output, 1)
+                curr_loss = criterion(output, label.squeeze(1))
 
-            if device == 'cuda':
-                curr_loss = curr_loss.item()
+                if device == 'cuda':
+                    curr_loss = curr_loss.item()
 
-            results.loss += curr_loss
-            results.corrects += torch.sum(preds == label.data)
-            predindex.update(preds, label.data)
+                results.loss += curr_loss
+                results.corrects += torch.sum(preds == label.data)
+                predindex.update(preds, label.data)
 
-        return results
+            return results
 
     def reset_parameters(self):
         with torch.no_grad:
@@ -102,15 +104,15 @@ class KeywordSearch(nn.Module):
 
         self.model = nn.Sequential()
 
-        self.model.add_module("StartBatchNorm", nn.BatchNorm1d(input_size))
+        self.model.add_module("StartBatchNorm", nn.BatchNorm2d(input_size))
 
-        prev_layer_size = input_size
+        prev_layer_size = INPUT_SHAPE[1]
         # padding = F.pad()
         for i, num_filters in enumerate(filters):
             # Convolutional layers
-            self.model.add_module(f"Conv2d-{i+1}", nn.Conv2d(prev_layer_size, num_filters, kernel_size=KERNEL_SIZE))
-            self.model.add_module(f"ZeroPad-{i+1}", nn.ZeroPad2d((0, 0, 2, 1)))
-            self.model.add_module(f"BatchNorm-{i+1}", nn.BatchNorm1d(num_filters))
+            self.model.add_module(f"Conv2d-{i+1}", nn.Conv2d(prev_layer_size, num_filters, kernel_size=(1, 1)))
+            # self.model.add_module(f"ZeroPad-{i+1}", nn.ZeroPad2d((0, 0, 2, 1)))
+            self.model.add_module(f"BatchNorm-{i+1}", nn.BatchNorm2d(num_filters))
             self.model.add_module(f"ReLu-{i+1}", nn.ReLU())
 
             prev_layer_size = num_filters
