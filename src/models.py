@@ -96,20 +96,32 @@ class BubblePredictor(nn.Module):
                 param.reset_parameters()
         return
 
-# class KeywordSearch(nn.Model):
-#     def __init__(self, input_size):
-#         model = nn.Sequential()
+class KeywordSearch(nn.Module):
+    def __init__(self, input_size):
+        super().__init__()
 
-#         model.add_module(nn.BatchNorm2d(input_size))
+        self.model = nn.Sequential()
 
-#         for num_filters in filters:
-#             # Convolutional layers
-#             model.add_module(nn.Conv2d(num_filters, kernel_size=KERNEL_SIZE, padding="same"))
-#             model.add_module(nn.BatchNormalization(100))
-#             model.add_module(nn.ReLU())
+        self.model.add_module("StartBatchNorm", nn.BatchNorm1d(input_size))
 
-#     def forward(self, history, state=None):
-#         x = nn.BatchNorm2d(history)
+        prev_layer_size = input_size
+        # padding = F.pad()
+        for i, num_filters in enumerate(filters):
+            # Convolutional layers
+            self.model.add_module(f"Conv2d-{i+1}", nn.Conv2d(prev_layer_size, num_filters, kernel_size=KERNEL_SIZE))
+            self.model.add_module(f"ZeroPad-{i+1}", nn.ZeroPad2d((0, 0, 2, 1)))
+            self.model.add_module(f"BatchNorm-{i+1}", nn.BatchNorm1d(num_filters))
+            self.model.add_module(f"ReLu-{i+1}", nn.ReLU())
 
-#         # for 
+            prev_layer_size = num_filters
+
+            # Pooling
+            self.model.add_module(f"MaxPooling2D-{i+1}", nn.MaxPool2d(kernel_size=POOL_SIZE))
+            self.model.add_module(f"Dropout-{i+1}", nn.Dropout(DROPOUT))
+
+    def forward(self, history, state=None):
+        conv = self.model(history)
+
+        return conv
+        
 

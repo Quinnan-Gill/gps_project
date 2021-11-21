@@ -451,7 +451,7 @@ class BubbleDataset(Dataset):
     def __cache_data(self, chunk_size):
         offset = self.size // chunk_size
 
-        chunk_length = self.window_size*2 if self.window_size != 0 else PRE_FETCH
+        chunk_length = self.window_size*4 if self.window_size != 0 else PRE_FETCH
 
         for i in range(chunk_size+1):
             if not (

@@ -201,6 +201,7 @@ def bubble_trainer():
                         corrects = output_eval.corrects
 
                         if phase == 'train':
+                            loss.requires_grad = True
                             loss.backward()
                             optimizer.step()
 
