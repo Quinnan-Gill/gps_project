@@ -191,12 +191,14 @@ def bubble_trainer():
                         assert o_w == l_w
 
                         running_count += o_w
+                        loss = torch.tensor(0.0).to(device)
                         output_eval, loss = model.evaluate_output(
                             outputs,
                             labels,
                             criterion,
                             predindex,
                             phase,
+                            loss,
                         )
                         # loss = output_eval.loss
                         corrects = output_eval.corrects
@@ -260,11 +262,6 @@ def bubble_trainer():
 
     except KeyboardInterrupt:
         pass
-
-    # final_model = copy.deepcopy(model_copy)
-    # torch.save({
-    #     'model': final_model
-    # }, os.path.join(experiment_name, 'best_model.pt'))
 
     return
 

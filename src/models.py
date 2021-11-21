@@ -65,7 +65,8 @@ class BubblePredictor(nn.Module):
                         labels,
                         criterion,
                         predindex,
-                        phase):
+                        phase,
+                        loss):
 
         device = self.__get_device()
 
@@ -75,9 +76,9 @@ class BubblePredictor(nn.Module):
 
         results = RunResults(device)
 
-        loss = torch.tensor(0.0).to(device)
-        if phase == 'train':
-            loss.requires_grad = True
+        # loss = torch.tensor(0.0).to(device)
+        # if phase == 'train':
+        #     loss.requires_grad = True
         for history in range(ouput_width):
             output = outputs[:, history, :]
             label = labels[:, history, :]
