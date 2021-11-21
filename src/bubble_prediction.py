@@ -191,13 +191,12 @@ def bubble_trainer():
                         assert o_w == l_w
 
                         running_count += o_w
-                        loss = torch.tensor(0.0).to(device)
                         output_eval, loss = model.evaluate_output(
                             outputs,
                             labels,
                             criterion,
                             predindex,
-                            loss,
+                            phase,
                         )
                         # loss = output_eval.loss
                         corrects = output_eval.corrects
