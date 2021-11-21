@@ -44,7 +44,9 @@ class PredIndexAccuracy(object):
 
 
 class RunResults(object):
-    def __init__(self, device):
+    def __init__(self, device, phase):
         self.loss: Tensor = torch.tensor(0.0).to(device)
+        if phase == 'train':
+            self.loss.requires_grad = True
         self.corrects: Tensor = torch.tensor(0).to(device)
         self.loss_list: List[Tensor] = []
