@@ -394,6 +394,7 @@ class BubbleDataset(Dataset):
         maxfiles: int = 2000,
         pos: int = 500,
         satelite: str = "Sat_A",
+        as_image: bool = False,
     ):
         self.bubble_measurements = bubble_measurements
 
@@ -405,6 +406,7 @@ class BubbleDataset(Dataset):
         self.time_diff = timedelta(days=1)
         self.window_size = window_size
         self.step_size = step_size
+        self.as_image = as_image
 
         hist_col_names = expand_measurements(TEC_MEASUREMENTS)
 

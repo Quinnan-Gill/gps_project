@@ -109,7 +109,7 @@ class KeywordSearch(nn.Module):
 
         self.model.add_module("StartBatchNorm", nn.BatchNorm2d(input_size))
 
-        prev_layer_size = INPUT_SHAPE[1]
+        prev_layer_size = input_size
         # padding = F.pad()
         for i, num_filters in enumerate(filters):
             # Convolutional layers
@@ -124,9 +124,35 @@ class KeywordSearch(nn.Module):
             self.model.add_module(f"MaxPooling2D-{i+1}", nn.MaxPool2d(kernel_size=POOL_SIZE))
             self.model.add_module(f"Dropout-{i+1}", nn.Dropout(DROPOUT))
 
+        self.flatten = nn.Flatten()
+        self.lin1 = nn.Linear(1024, DENSE_1)
+        self.batch1 = nn.BatchNorm1d(DENSE_1)
+        self.relu1 = nn.ReLU()
+        self.dropout1 = nn.Dropout(DROPOUT)
+        self.lin2 = nn.Linear(DENSE_1, DENSE_2)
+        self.batch2 = nn.BatchNorm1d(DENSE_2)
+        self.relu2 = nn.ReLU()
+        self.dropout2 = nn.Dropout(DROPOUT)
+        
+        self.classification = nn.Linear(DENSE_2, NUM_CLASSES)
+
+
     def forward(self, history, state=None):
         conv = self.model(history)
+        import pdb
+        pdb.set_trace()
+        x = self.flatten(conv)
+        x = self.lin1(x)
+        x = self.batch1(x)
+        x = self.relu1(x)
+        x = self.dropout1(x)
+        x = self.lin2(x)
+        x = self.batch2(x)
+        x = self.relu2(x)
+        x = self.dropout2(x)
 
-        return conv
+        x = self.classification(x)
+    
+        return x
         
 
