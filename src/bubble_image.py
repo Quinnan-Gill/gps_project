@@ -186,6 +186,13 @@ def bubble_image():
                     with torch.set_grad_enabled(phase == 'train'):
                         outputs = model(sequences)
 
+                        label_bincount = torch.bincount(
+                            torch.flatten(labels.squeeze(1))
+                        )
+                        num_ones = 0
+                        if len(label_bincount) == 2:
+                            num_ones = label_bincount[1].item()
+
                         loss = criterion(outputs, labels.squeeze(1))
                         predindex = safe_bincount(torch.bincount(
                             torch.flatten(
@@ -213,6 +220,7 @@ def bubble_image():
                                     'Training Incorrect Zero Guesses': incorrect_zeros.item(),
                                     # 'Training Correct Guesses': predindex.pred_correct / running_count,
                                     'Training Incorrect One Guesses': incorrect_ones.item(),
+                                    'Training Ones': num_ones
                                 })
                             if torch.isnan(loss):
                                 # print("Gradient Explosion, restart run")
