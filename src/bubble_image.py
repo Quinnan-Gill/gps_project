@@ -219,8 +219,8 @@ def bubble_image():
                                 sys.exit(1)
                         else:
                             progress_bar.set_description(
-                                'Step: %d/%d, Loss: %.4f, Loss per: %.4f, Accuracy: %.4f, Epoch %d/%d' %
-                                (step, num_steps, loss.item(), loss.item() / o_w, corrects.item() / len(labels), epoch, FLAGS.epochs)
+                                'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Epoch %d/%d' %
+                                (step, num_steps, loss.item(), epoch, FLAGS.epochs)
                             )
                             if step % 10 == 0:
                                 WANDB.log({
