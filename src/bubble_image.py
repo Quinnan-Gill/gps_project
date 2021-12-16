@@ -118,7 +118,7 @@ def bubble_image():
     writer = SummaryWriter(log_dir=experiment_name)
 
     WANDB.init(
-        project="research",
+        project="cnn_research",
         name="{}_{}_{}_{}_{}".format(
             FLAGS.label,
             "CNN",
