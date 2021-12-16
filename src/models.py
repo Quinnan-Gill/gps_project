@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -102,16 +103,22 @@ class BubblePredictor(nn.Module):
         return
 
 class KeywordSearch(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, image_size):
         super().__init__()
 
         self.model = nn.Sequential()
 
         self.model.add_module("StartBatchNorm", nn.BatchNorm2d(input_size))
 
+        filters_length = int(math.log(image_size, 2))
+        lim_filters = filters[:filters_length]
+
+        image_pool = image_size
+        image_sizes_list = [image_pool]
+
         prev_layer_size = input_size
         # padding = F.pad()
-        for i, num_filters in enumerate(filters):
+        for i, num_filters in enumerate(lim_filters):
             # Convolutional layers
             self.model.add_module(f"Conv2d-{i+1}", nn.Conv2d(prev_layer_size, num_filters, kernel_size=(1, 1)))
             # self.model.add_module(f"ZeroPad-{i+1}", nn.ZeroPad2d((0, 0, 2, 1)))
@@ -124,35 +131,45 @@ class KeywordSearch(nn.Module):
             self.model.add_module(f"MaxPooling2D-{i+1}", nn.MaxPool2d(kernel_size=POOL_SIZE))
             self.model.add_module(f"Dropout-{i+1}", nn.Dropout(DROPOUT))
 
-        self.flatten = nn.Flatten()
-        self.lin1 = nn.Linear(1024, DENSE_1)
-        self.batch1 = nn.BatchNorm1d(DENSE_1)
-        self.relu1 = nn.ReLU()
-        self.dropout1 = nn.Dropout(DROPOUT)
-        self.lin2 = nn.Linear(DENSE_1, DENSE_2)
-        self.batch2 = nn.BatchNorm1d(DENSE_2)
-        self.relu2 = nn.ReLU()
-        self.dropout2 = nn.Dropout(DROPOUT)
-        
-        self.classification = nn.Linear(DENSE_2, NUM_CLASSES)
+            image_pool = image_pool // 2
+            image_sizes_list.append(image_pool)
 
+        # Classifier
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(1024, DENSE_1),
+            nn.BatchNorm1d(DENSE_1),
+            nn.ReLU(),
+            nn.Dropout(DROPOUT),
+            nn.Linear(DENSE_1, DENSE_2),
+            nn.BatchNorm1d(DENSE_2),
+            nn.ReLU(),
+            nn.Dropout(DROPOUT),
+            nn.Linear(DENSE_2, 2),
+        )
+
+        # Upsampling
+        self.upsampler = nn.Sequential()
+        image_sizes_list = image_sizes_list[:-1][::-1]
+        lim_filters = lim_filters[:-1][::-1]
+        lim_filters.append(2)
+
+        for i, num_filters in enumerate(lim_filters):
+            self.upsampler.add_module(f"Upsample-{i+1}", nn.Upsample(image_sizes_list[i]))
+
+            # Convolutional layers
+            self.upsampler.add_module(f"Conv2d-{i+1}", nn.Conv2d(prev_layer_size, num_filters, kernel_size=(1, 1)))
+            # self.model.add_module(f"ZeroPad-{i+1}", nn.ZeroPad2d((0, 0, 2, 1)))
+            self.upsampler.add_module(f"BatchNorm-{i+1}", nn.BatchNorm2d(num_filters))
+            self.upsampler.add_module(f"ReLu-{i+1}", nn.ReLU())
+
+            prev_layer_size = num_filters
+
+        self.upsampler.add_module("SoftMax", nn.SoftMax(2))
 
     def forward(self, history, state=None):
         conv = self.model(history)
-        import pdb
-        pdb.set_trace()
-        x = self.flatten(conv)
-        x = self.lin1(x)
-        x = self.batch1(x)
-        x = self.relu1(x)
-        x = self.dropout1(x)
-        x = self.lin2(x)
-        x = self.batch2(x)
-        x = self.relu2(x)
-        x = self.dropout2(x)
 
-        x = self.classification(x)
+        x = self.upsampler(conv)
     
         return x
-        
-

@@ -79,8 +79,8 @@ inv_categories = {
 INPUT_SHAPE = (99, 40)
 TARGET_SHAPE = (99, 40, 1)
 PARSE_PARAMS = (0.025, 0.01, 40)
-# filters = [16, 32, 64, 128, 256]
-filters = [16]
+filters = [16, 32, 64, 128, 256]
+# filters = [16, 32, 64, 128]
 
 DROPOUT = 0.25
 KERNEL_SIZE = (3, 3)

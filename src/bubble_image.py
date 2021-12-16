@@ -26,12 +26,8 @@ from datasets import (
     IBI_MEASUREMENT,
     expand_measurements,
 )
-from rnn_modules import (
-    LSTMCell,
-    PeepholedLSTMCell,
-    CoupledLSTMCell,
-)
-from models import BubblePredictor
+# from models import KeywordSearch
+from keywordsearch import UNet, dice_loss
 
 import wandb
 
@@ -41,8 +37,8 @@ flags.DEFINE_float('learning_rate', 1e-3, 'Learning rate.')
 flags.DEFINE_float('weight_decay', 0, 'Weight decay (L2 regularization).')
 flags.DEFINE_integer('batch_size', 2048, 'Number of examples per batch.')
 flags.DEFINE_integer('epochs', 20, 'Number of epochs for training.')
-flags.DEFINE_integer('window_size', 120, 'How large the time window will be')
-flags.DEFINE_integer('step_size', 120, 'How much the window shifts')
+flags.DEFINE_integer('window_size', 16, 'The size of the height and width for the image')
+flags.DEFINE_integer('step_size', 64, 'How much the window shifts')
 flags.DEFINE_string('experiment_name', 'exp', 'Defines experiment name.')
 flags.DEFINE_string('model_checkpoint', '',
                                         'Specifies the checkpont for analyzing.')
@@ -57,18 +53,18 @@ flags.DEFINE_integer('prefetch', 5000, 'How much to cache for the data')
 flags.DEFINE_string('message', '', 'Message for wandb')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
-flags.DEFINE_enum('rnn_module', 'lstm',
-                                    ['lstm', 'peep', 'coupled'],
-                                    'Specifies the recurrent module in the RNN.')
 
-# RNN Modules for LSTM
-RNN_MODULES = {
-    'lstm': LSTMCell,
-    'peep': PeepholedLSTMCell,
-    'coupled': CoupledLSTMCell,
-}
+def sentence_to_image(sentence):
+    batch_size, sentence_len, channels = sentence.size()
+    
+    image_len = int(sentence_len ** 0.5)
 
-def bubble_trainer():
+    image = sentence.transpose(1, 2)
+    image = image.view(batch_size, channels, image_len, image_len)
+
+    return image
+
+def bubble_image():
     if FLAGS.link:
         WANDB = wandb
     else:
@@ -78,7 +74,7 @@ def bubble_trainer():
         start_time=_decode_time_str(FLAGS.start_train_time),
         end_time=_decode_time_str(FLAGS.end_train_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
-        window_size=FLAGS.window_size,
+        window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
         index_filter=None,
         prefetch=FLAGS.prefetch,
@@ -94,7 +90,7 @@ def bubble_trainer():
         start_time=_decode_time_str(FLAGS.start_val_time),
         end_time=_decode_time_str(FLAGS.end_val_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
-        window_size=FLAGS.window_size,
+        window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
         index_filter=None,
         prefetch=FLAGS.prefetch
@@ -105,7 +101,7 @@ def bubble_trainer():
         shuffle=False,
         num_workers=1
     )
-    
+
     best_model = None
     best_loss = 0.0
     
@@ -114,7 +110,7 @@ def bubble_trainer():
     experiment_name = 'experiments/{}_{}_{}.h_{}'.format(
         FLAGS.experiment_name,
         FLAGS.label,
-        FLAGS.rnn_module,
+        "CNN",
         FLAGS.hidden_size
     )
 
@@ -125,7 +121,7 @@ def bubble_trainer():
         project="research",
         name="{}_{}_{}_{}_{}".format(
             FLAGS.label,
-            FLAGS.rnn_module,
+            "CNN",
             FLAGS.window_size,
             FLAGS.step_size,
             FLAGS.message,
@@ -133,9 +129,13 @@ def bubble_trainer():
         reinit=True
     )
     
-    model = BubblePredictor(
-        rnn_module=RNN_MODULES[FLAGS.rnn_module],
-        hidden_size=FLAGS.hidden_size,
+    # model = KeywordSearch(
+    #     len(expand_measurements(TEC_MEASUREMENTS)),
+    #     FLAGS.window_size
+    # )
+    model = UNet(
+        len(expand_measurements(TEC_MEASUREMENTS)),
+        2
     )
 
     model.to(device)
@@ -166,7 +166,6 @@ def bubble_trainer():
                 phase, dataset.size, dataset.start_time, dataset.end_time
             ))
             for epoch in range(FLAGS.epochs):
-
                 num_steps = len(data_loader)
                 running_loss = 0.0
                 running_corrects = 0
@@ -178,39 +177,24 @@ def bubble_trainer():
                 for step, (sequences, labels) in progress_bar:
                     total_step = epoch * len(data_loader) + step
 
-                    sequences = sequences.to(device)
-                    labels = labels.to(device)
+                    # why weird batch sizes
+                    sequences = sentence_to_image(sequences).to(device)
+                    labels = sentence_to_image(labels).to(device)
 
                     optimizer.zero_grad()
 
                     with torch.set_grad_enabled(phase == 'train'):
-                        outputs, _ = model(sequences)
+                        outputs = model(sequences)
 
-                        _, o_w, _ = outputs.shape
-                        _, l_w, _ = labels.shape
-                        assert o_w == l_w
-
-                        running_count += o_w
-                        loss = torch.tensor(0.0).to(device)
-                        _, output_width, _ = outputs.shape
-                        _, label_width, _ = labels.shape
-                        assert output_width == label_width
-
-                        corrects = torch.tensor(0).to(device)
-
-                        for history in range(output_width):
-                            output = outputs[:, history, :]
-                            label = labels[:, history, :]
-
-                            _, preds = torch.max(output, 1)
-                            curr_loss = criterion(output, label.squeeze(1))
-
-                            if device == 'cuda':
-                                curr_loss = curr_loss.item()
-
-                            loss = loss + curr_loss
-                            corrects += torch.sum(preds == label.data)
-                            predindex.update(preds, label.data)
+                        loss = criterion(outputs, labels.squeeze(1))
+                        predindex = torch.bincount(
+                            torch.flatten(
+                                torch.subtract(outputs.max(1)[1], labels.squeeze(1))
+                            ) + 1
+                        )
+                        incorrect_ones = predindex[2]
+                        corrects = predindex[1]
+                        incorrect_zeros = predindex[0]
 
                         # loss = output_eval.loss
 
@@ -221,22 +205,20 @@ def bubble_trainer():
                             # writer.add_scalar('loss', loss.item(), total_step)
                             # writer.add_scalar('accuracy', corrects.item() / len(labels), total_step)
                             progress_bar.set_description(
-                                'Step: %d/%d, Loss: %.4f, Loss per: %.4f, Accuracy: %.4f, Epoch %d/%d' %
-                                (step, num_steps, loss.item(), loss.item() / o_w, corrects.item() / len(labels), epoch, FLAGS.epochs)
+                                'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Epoch %d/%d' %
+                                (step, num_steps, loss.item(), corrects.item() / len(labels), epoch, FLAGS.epochs)
                             )
                             if step % 10 == 0:
                                 WANDB.log({
                                     'Training Total Loss': loss.item(),
                                     'Training Total Accuracy': corrects.item(),
-                                    'Training Accuracy': corrects.item() / (len(labels) * o_w),
-                                    'Training Loss Per Chunk': loss.item() / o_w,
-                                    'Training Incorrect Zero Guesses': predindex.pred_incorrect_zeros / running_count,
-                                    'Training Correct Guesses': predindex.pred_correct / running_count,
-                                    'Training Incorrect One Guesses': predindex.pred_incorrect_ones / running_count,
+                                    'Training Incorrect Zero Guesses': incorrect_zeros.item(),
+                                    # 'Training Correct Guesses': predindex.pred_correct / running_count,
+                                    'Training Incorrect One Guesses': incorrect_ones.item(),
                                 })
                             if torch.isnan(loss):
-                                    # print("Gradient Explosion, restart run")
-                                    sys.exit(1)
+                                # print("Gradient Explosion, restart run")
+                                sys.exit(1)
                         else:
                             progress_bar.set_description(
                                 'Step: %d/%d, Loss: %.4f, Loss per: %.4f, Accuracy: %.4f, Epoch %d/%d' %
@@ -245,11 +227,10 @@ def bubble_trainer():
                             if step % 10 == 0:
                                 WANDB.log({
                                     'Eval Total Loss': loss.item(),
-                                    'Eval Accuracy': corrects.item(),
-                                    'Eval Loss Per Chunk': loss.item() / o_w,
-                                    'Eval Incorrect Zero Guesses': predindex.pred_incorrect_zeros,
-                                    'Eval Correct Guesses': predindex.pred_correct,
-                                    'Eval Incorrect One Guesses': predindex.pred_incorrect_ones,
+                                    'Eval Total Accuracy': corrects.item(),
+                                    'Eval Incorrect Zero Guesses': incorrect_zeros.item(),
+                                    # 'Eval Correct Guesses': predindex.pred_correct,
+                                    'Eval Incorrect One Guesses': incorrect_ones.item(),
                                 })
                 
                     running_loss += loss.item() * sequences.size(0)
@@ -277,7 +258,7 @@ def bubble_trainer():
     return
 
 def main(unused_argvs):
-    bubble_trainer()
+    bubble_image()
 
 if __name__ == '__main__':
     app.run(main)
