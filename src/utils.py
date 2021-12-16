@@ -42,6 +42,27 @@ class PredIndexAccuracy(object):
             # therefore (1 - 0) + 1 == 2
             self.pred_incorrect_ones += bincount[2]
 
+def safe_bincount(bincount):
+    if len(bincount) == 0 or len(bincount) > 3:
+        raise ValueError("Preds returned greater than 2")
+
+    results = [0] * 3
+
+    if len(bincount) >= 1:
+        # prediction was 0 but label was 1
+        # therefore (0 - 1) + 1 == 0
+        results[0] = bincount[0]
+    if len(bincount) >= 2:
+        # prediction was 0/1 and label was 0/1 respectively
+        # therefore (0/1 - 0/1) + 1 == 1
+        results[1] = bincount[1]
+    if len(bincount) >= 3:
+        # prediction was 1 but label was 0
+        # therefore (1 - 0) + 1 == 2
+        results[2] = bincount[2]
+
+    return results
+
 
 class RunResults(object):
     def __init__(self, device):

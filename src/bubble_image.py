@@ -9,7 +9,6 @@ import torch.nn.functional as F
 from absl import app, flags
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torchvision import transforms
 from tqdm import tqdm
 from datetime import datetime
 from unittest.mock import MagicMock
@@ -17,7 +16,8 @@ from unittest.mock import MagicMock
 from utils import (
     DATETIME_PSTR,
     PredIndexAccuracy,
-    _decode_time_str
+    _decode_time_str,
+    safe_bincount,
 )
 from datasets import (
     BubbleDataset,
@@ -187,16 +187,14 @@ def bubble_image():
                         outputs = model(sequences)
 
                         loss = criterion(outputs, labels.squeeze(1))
-                        predindex = torch.bincount(
+                        predindex = safe_bincount(torch.bincount(
                             torch.flatten(
                                 torch.subtract(outputs.max(1)[1], labels.squeeze(1))
                             ) + 1
-                        )
+                        ))
                         incorrect_ones = predindex[2]
                         corrects = predindex[1]
                         incorrect_zeros = predindex[0]
-
-                        # loss = output_eval.loss
 
                         if phase == 'train':
                             loss.backward()
