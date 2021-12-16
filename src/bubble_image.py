@@ -191,7 +191,7 @@ def bubble_image():
                             torch.flatten(
                                 torch.subtract(outputs.max(1)[1], labels.squeeze(1))
                             ) + 1
-                        ))
+                        ), device)
                         incorrect_ones = predindex[2]
                         corrects = predindex[1]
                         incorrect_zeros = predindex[0]

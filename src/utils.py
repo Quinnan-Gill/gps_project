@@ -42,11 +42,11 @@ class PredIndexAccuracy(object):
             # therefore (1 - 0) + 1 == 2
             self.pred_incorrect_ones += bincount[2]
 
-def safe_bincount(bincount):
+def safe_bincount(bincount, device):
     if len(bincount) == 0 or len(bincount) > 3:
         raise ValueError("Preds returned greater than 2")
 
-    results = [0] * 3
+    results = [torch.tensor(0).to(device)]*3
 
     if len(bincount) >= 1:
         # prediction was 0 but label was 1
