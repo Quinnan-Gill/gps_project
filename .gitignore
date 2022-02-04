@@ -2,6 +2,7 @@
 data/
 experiments/
 wandb
+images
 
 
 # Byte-compiled / optimized / DLL files

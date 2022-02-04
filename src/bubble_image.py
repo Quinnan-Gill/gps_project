@@ -1,7 +1,9 @@
-import collections
+import random
 import copy
 import os
 import sys
+
+from sqlalchemy.sql.expression import label
 
 import torch
 import torch.nn as nn
@@ -10,6 +12,8 @@ from absl import app, flags
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+import seaborn as sns
+import matplotlib.pyplot as plt
 from datetime import datetime
 from unittest.mock import MagicMock
 
@@ -53,6 +57,88 @@ flags.DEFINE_integer('prefetch', 5000, 'How much to cache for the data')
 flags.DEFINE_string('message', '', 'Message for wandb')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
+flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
+flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
+
+IMAGE_DIR = "./images/"
+LOOP_BREAK = 1000
+
+def one_count(labels):
+    num_ones = 0
+
+    label_bincount = torch.bincount(
+        torch.flatten(labels.squeeze(1))
+    )
+
+    if len(label_bincount) == 2:
+        num_ones = label_bincount[1].item()
+
+    return num_ones
+
+def label_size(labels):
+    return torch.flatten(labels).shape[0]
+
+class ImageCapture:
+    def __init__(self):
+        self.captured = False
+        self.flag_string = f"{FLAGS.end_train_time}_{FLAGS.window_size}_{FLAGS.step_size}"
+        self.softmax = nn.Soft
+
+        self.image_directory = os.path.join(
+            IMAGE_DIR, f"cnn_{self.flag_string}"
+        )
+        
+        # Create a directory if it does not exist
+        if not os.path.exists(self.image_directory):
+            os.makedirs(self.image_directory)
+            
+    def select_image(self, label_batch):
+        batch_size = label_batch.shape[0]
+        size = label_size(label_batch[0])
+        i = 0
+
+        while True:
+            random_selection = random.randint(0, batch_size)
+            
+            labels = label_batch[random_selection]
+            
+            num_ones = one_count(labels)
+            
+            if num_ones / size > FLAGS.img_threshold:
+                return random_selection
+
+            i += 1
+            if i > LOOP_BREAK:
+                print("Could not find good image")
+                return random_selection
+            
+    
+    def save_image(self, image_data, labels):
+        self.captured = True
+
+        assert len(image_data.shape) == 3, "Only send one image in batch"
+        
+        image_labels = expand_measurements(TEC_MEASUREMENTS)
+        for i, channel in enumerate(image_data):
+            ax = sns.heatmap(channel, linewidth=0.5)
+            image_name = os.path.join(self.image_directory, f"{image_labels[i]}_{self.flag_string}")
+            plt.savefig(image_name)
+
+        ax = sns.heatmap(labels.squeeze(0), linewidth=0.5)
+        image_name = os.path.join(self.image_directory, f"labels_{self.flag_string}")
+        plt.savefig(image_name)
+
+    def select_and_save_image(self, image_batch, label_batch):
+        if self.captured:
+            return
+
+        rand_sel = self.select_image(label_batch)
+        
+        image_data = image_batch[rand_sel]
+        labels = label_batch[rand_sel]
+
+        self.save_image(image_data, labels)
+
 
 def sentence_to_image(sentence):
     batch_size, sentence_len, channels = sentence.size()
@@ -69,6 +155,11 @@ def bubble_image():
         WANDB = wandb
     else:
         WANDB = MagicMock()
+
+    if FLAGS.img_capture:
+        image_capture = ImageCapture()
+    else:
+        image_capture = MagicMock()
 
     train_dataset = BubbleDataset(
         start_time=_decode_time_str(FLAGS.start_train_time),
@@ -183,15 +274,12 @@ def bubble_image():
 
                     optimizer.zero_grad()
 
+                    image_capture.select_and_save_image(sequences, labels)
+
                     with torch.set_grad_enabled(phase == 'train'):
                         outputs = model(sequences)
 
-                        label_bincount = torch.bincount(
-                            torch.flatten(labels.squeeze(1))
-                        )
-                        num_ones = 0
-                        if len(label_bincount) == 2:
-                            num_ones = label_bincount[1].item()
+                        num_ones = one_count(labels)
 
                         loss = criterion(outputs, labels.squeeze(1))
                         predindex = safe_bincount(torch.bincount(
@@ -199,6 +287,7 @@ def bubble_image():
                                 torch.subtract(outputs.max(1)[1], labels.squeeze(1))
                             ) + 1
                         ), device)
+                        
                         incorrect_ones = predindex[2]
                         corrects = predindex[1]
                         incorrect_zeros = predindex[0]
