@@ -46,6 +46,8 @@ class ViresMetaData(Base):
     zip_hash = Column(String)
     measurement = Column(String)
     processed = Column(Boolean)
+    data_file = Column(String)
+    data_size = Column(Integer)
 
     start_time = Column(DateTime)
     end_time = Column(DateTime)

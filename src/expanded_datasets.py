@@ -71,8 +71,8 @@ FLAGS = flags.FLAGS
 #         prefetch=FLAGS.prefetch
 #     )
 
-flags.DEFINE_string('start_val_time', '2017_01_01', 'The start datetime for evaluation')
-flags.DEFINE_string('end_val_time', '2017_01_02', 'The end datetime for evaluation')
+flags.DEFINE_string('start_val_time', '2016_01_01', 'The start datetime for evaluation')
+flags.DEFINE_string('end_val_time', '2016_01_02', 'The end datetime for evaluation')
 flags.DEFINE_integer('window_size', 120, 'How large the time window will be')
 flags.DEFINE_integer('step_size', 120, 'How much the window shifts')
 flags.DEFINE_integer('prefetch', 5000, 'How much to cache for the data')
@@ -110,7 +110,7 @@ class BubbleDatasetExpanded(Dataset):
             "l1", "l2"
         ]
 
-        self.expanded_columns = self.get_columns()
+        self.expanded_columns = self.get_columns() + ["bubble_index"]
         self.prns_seen = set()
 
         tec_url, tec_vires_request = self.get_data_request(
@@ -143,7 +143,7 @@ class BubbleDatasetExpanded(Dataset):
             return [measurement + f"_{i+1}" for i in range(MAX_PRN)]
 
         columns = []
-        tec_meas_with_indexes = TEC_MEASUREMENTS + [("bubble_index", 1)]
+        tec_meas_with_indexes = TEC_MEASUREMENTS
         for measurement, values in tec_meas_with_indexes:
             if values > 1:
                 for i in range(values):
@@ -263,8 +263,15 @@ class BubbleDatasetExpanded(Dataset):
             tec_df = pd.DataFrame()
             ibi_df = pd.DataFrame()
 
+            processed = False
+
             for zip_file in zip_range:
+                print("-" * 20)
+                print(f"{zip_file.zip_file}")
+                print("-" * 20)
+
                 if zip_file.processed:
+                    processed = True
                     continue
 
                 resp = requests.get(URI + zip_file.zip_file, verify=False)
@@ -296,6 +303,9 @@ class BubbleDatasetExpanded(Dataset):
 
                 shutil.rmtree(tmp_dir)
 
+            if processed:
+                continue
+
             if self.index_filter:
                 ibi_df = ibi_df[ibi_df.bubble_index != -1]
 
@@ -315,6 +325,7 @@ class BubbleDatasetExpanded(Dataset):
 
                     for j in range(3):
                         exp_dict[f"leo_position{j+1}"] = row_obj[f"leo_position{j+1}"]
+                    exp_dict["bubble_index"] = row_obj["bubble_index"]
                     prn = row_obj["prn"]
                     self.prns_seen.add(prn)
                     for col in self.expanded_tec_columns:
@@ -334,18 +345,15 @@ class BubbleDatasetExpanded(Dataset):
             data_df = data[~data['timestamp'].isin(data_count_idx)]
             data_df = data_df.groupby(by="timestamp").apply(groupby_func)
 
-            data_df = data_df.reset_index()
             
             exp_file = zip_file.zip_file.replace("/", "_").replace(".ZIP", ".parquet")
             data_df.to_parquet(f"data/{exp_file}")
-
-            # data.to_sql("data_measurement", engine, if_exists='append', index_label='measurement_id')
             
-            # for zip_file in zip_range:
-            #     zip_file.processed = True
-            # session.commit()
-
-
+            for zip_file in zip_range:
+                zip_file.processed = True
+                zip_file.data_file = f"data/{exp_file}"
+                zip_file.data_size = len(data_df)
+            session.commit()
 
 
 def get_data():
@@ -355,11 +363,9 @@ def get_data():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size,
         step_size=FLAGS.step_size,
-        index_filter=None,
+        # index_filter=None,
         prefetch=FLAGS.prefetch
     )
-
-    val_dataset[0]
 
 
 def main(unused_argvs):
