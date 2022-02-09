@@ -97,5 +97,16 @@ class DataPoint(Base, DataObject):
     timestamp = Column(DateTime)
     
 
+class Prn(Base):
+    __tablename__ = "prn"
+
+    prn_id = Column(Integer, primary_key=True)
+    prn_value = Column(Integer)
+
+    """
+    Relationships
+    """
+    meta_id = Column(Integer, ForeignKey("vires_meta_data.meta_id"))
+
 # Create the tables
 Base.metadata.create_all(engine)

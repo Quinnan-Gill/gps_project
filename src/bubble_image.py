@@ -57,6 +57,7 @@ flags.DEFINE_integer('prefetch', 5000, 'How much to cache for the data')
 flags.DEFINE_string('message', '', 'Message for wandb')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
+flags.DEFINE_enum('dataset', 'bubble_dataset', ['bubble_dataset', 'expanded_dataset'])
 flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
 
@@ -219,13 +220,9 @@ def bubble_image():
         ),
         reinit=True
     )
-    
-    # model = KeywordSearch(
-    #     len(expand_measurements(TEC_MEASUREMENTS)),
-    #     FLAGS.window_size
-    # )
+
     model = UNet(
-        len(expand_measurements(TEC_MEASUREMENTS)),
+        val_dataset.get_column_size(),
         2
     )
 

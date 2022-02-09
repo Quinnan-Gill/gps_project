@@ -6,6 +6,7 @@ import enum
 import os
 import hashlib
 import io
+from re import S
 from typing import List
 import requests
 import cdflib
@@ -13,17 +14,14 @@ import tempfile
 import json
 import zipfile
 import shutil
-import dask.array as da
+import dask
 
 import numpy as np
-import pyarrow.parquet as pq
 from absl import app, flags
 from torch.utils.data import Dataset
 from datetime import datetime, timedelta
 from sqlalchemy import and_
-from sqlalchemy.inspection import inspect
 import pandas as pd
-from torch.utils.data import DataLoader
 
 from sql_models import (
     ViresRequests,
@@ -78,9 +76,10 @@ flags.DEFINE_integer('step_size', 120, 'How much the window shifts')
 flags.DEFINE_integer('prefetch', 5000, 'How much to cache for the data')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
+flags.DEFINE_boolean('fetch_data', False, help='If fetching data from the FTP or not')
 
 
-class BubbleDatasetExpanded(Dataset):
+class BubbleDatasetExpandedFTP(Dataset):
     def __init__(
         self,
         start_time: datetime,
@@ -310,6 +309,7 @@ class BubbleDatasetExpanded(Dataset):
                 ibi_df = ibi_df[ibi_df.bubble_index != -1]
 
             data = pd.merge(tec_df, ibi_df, left_index=True, right_index=True)
+            data = data.head()
             data = data.reset_index()
 
             def count_leo_groups(grouped_df):
@@ -356,17 +356,121 @@ class BubbleDatasetExpanded(Dataset):
             session.commit()
 
 
-def get_data():
-    val_dataset = BubbleDatasetExpanded(
-        start_time=_decode_time_str(FLAGS.start_val_time),
-        end_time=_decode_time_str(FLAGS.end_val_time),
-        bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
-        window_size=FLAGS.window_size,
-        step_size=FLAGS.step_size,
-        # index_filter=None,
-        prefetch=FLAGS.prefetch
-    )
+class BubbleDatasetExpanded(Dataset):
+    def __init__(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        bubble_measurements: str,
+        window_size: int,
+        step_size: int,
+        prefetch: int = PRE_FETCH,
+        index_filter: List[int] = [-1],
+        maxfiles: int = 2000,
+        pos: int = 500,
+        satelite: str = "Sat_A",
+    ):
+        self.bubble_measurements = bubble_measurements
 
+        self.start_time = start_time
+        self.end_time = end_time
+        self.prefetch = prefetch
+        self.index_filter = index_filter
+
+        self.time_diff = timedelta(days=1)
+        self.window_size = window_size
+        self.step_size = step_size
+
+        self.vires_data_files = (
+            session.query(ViresMetaData.data_file)
+            .filter(
+                and_(
+                    ViresMetaData.processed,
+                    ViresMetaData.measurement == "TEC", # TEC and IBI should have the same datafile
+                    ViresMetaData.start_time >= self.start_time,
+                    ViresMetaData.end_time <= self.end_time
+                )
+            )
+        ).all()      
+
+        self.data_df = None
+        data_df_set = False
+
+        for datafile in self.vires_data_files:
+            datafile = datafile[0]
+
+            if not data_df_set:
+                self.data_df = pd.read_parquet(datafile)
+            else:
+                new_df = pd.read_parquet(datafile)
+                self.data_df = pd.concat([self.data_df, new_df])
+
+        # Filter out columns with all nans
+        for col in self.data_df.columns:
+            if pd.isnull(self.data_df[col]).all():
+                self.data_df.pop(col)
+        
+        for col in self.data_df.columns[:-1]:
+            self.data_df[col] = self.data_df[col]  / self.data_df[col].abs().max()
+
+        self.data_df = self.data_df.replace(np.nan, 0.0)
+
+        self.size = len(self.data_df)
+        print("-" * 20)
+        print(f"Size: {self.size}")
+        print("-" * 20)
+
+        self.label = self.data_df.pop('bubble_index').to_numpy()
+        self.history = self.data_df.to_numpy()
+
+    def __len__(self):
+        if self.window_size == 0:
+            return self.size
+
+        length = self.size - (self.size % self.window_size)
+        length -= self.window_size
+
+        return length // self.step_size
+
+    def __getitem__(self, index):
+        if self.window_size == 0:
+            history = self.history[index]
+            label = self.label[index]
+        else:
+            start_index = (self.step_size * index)
+            end_index = (start_index + self.window_size)
+
+            history = self.history[start_index:end_index].astype(np.float32)
+            label = self.label[start_index:end_index]
+
+        return history, label
+
+    def get_column_size(self):
+        return len(self.history[0])
+
+def get_data():
+    if FLAGS.fetch_data:
+        BubbleDatasetExpandedFTP(
+            start_time=_decode_time_str(FLAGS.start_val_time),
+            end_time=_decode_time_str(FLAGS.end_val_time),
+            bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
+            window_size=FLAGS.window_size,
+            step_size=FLAGS.step_size,
+            # index_filter=None,
+            prefetch=FLAGS.prefetch
+        )
+    else:
+        values = BubbleDatasetExpanded(
+            start_time=_decode_time_str(FLAGS.start_val_time),
+            end_time=_decode_time_str(FLAGS.end_val_time),
+            bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
+            window_size=FLAGS.window_size,
+            step_size=FLAGS.step_size,
+            # index_filter=None,
+            prefetch=FLAGS.prefetch
+        )
+
+        values.get_column_size()
 
 def main(unused_argvs):
     get_data()

@@ -513,3 +513,6 @@ class BubbleDataset(Dataset):
             assert history.shape[0] == self.window_size, "{}: {}: {}".format(history.shape, index, (start_index, end_index))
 
         return history, label
+
+    def get_column_size(self):
+        return len(expand_measurements(TEC_MEASUREMENTS))
