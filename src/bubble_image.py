@@ -266,7 +266,7 @@ def bubble_image():
                 num_steps = len(data_loader)
                 running_loss = 0.0
                 running_corrects = 0
-                running_count = 0
+                running_total = 0.0
 
                 predindex = PredIndexAccuracy(device)
 
@@ -340,11 +340,17 @@ def bubble_image():
                 
                     running_loss += loss.item() * sequences.size(0)
                     running_corrects += corrects
+                    running_total += float(corrects + incorrects)
 
                 epoch_loss = running_loss
                 epoch_acc = running_corrects
+                epoch_acc_percent = running_corrects / running_total
                 if phase == 'train':
-                    WANDB.log({"Epoch Training Accurancy": epoch_acc, "Epoch Training Loss": epoch_loss})
+                    WANDB.log({
+                        "Epoch Training Accurancy": epoch_acc,
+                        "Epoch Training Loss": epoch_loss,
+                        "Epoch Training Accuracy Precent": epoch_acc_percent,
+                    })
                 # print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
                 #             (epoch + 1, phase, epoch_acc, epoch_loss))
                 
