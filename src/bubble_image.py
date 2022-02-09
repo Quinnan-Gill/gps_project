@@ -5,6 +5,7 @@ import sys
 
 from sqlalchemy.sql.expression import label
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -287,15 +288,17 @@ def bubble_image():
                         num_ones = one_count(labels)
 
                         loss = criterion(outputs, labels.squeeze(1))
-                        predindex = safe_bincount(torch.bincount(
-                            torch.flatten(
-                                torch.subtract(outputs.max(1)[1], labels.squeeze(1))
-                            ) + 1
-                        ), device)
+                        # predindex = safe_bincount(torch.bincount(
+                        #     torch.flatten(
+                        #         torch.subtract(outputs.max(1)[1], labels.squeeze(1))
+                        #     ) + 1
+                        # ), device)
                         
-                        incorrect_ones = predindex[2]
-                        corrects = predindex[1]
-                        incorrect_zeros = predindex[0]
+                        numpy_outputs = outputs.max(1)[1].cpu().numpy()
+                        numpy_labels = labels.squeeze(1).cpu().numpy()
+
+                        corrects = np.sum(numpy_outputs == numpy_labels)
+                        incorrects = np.sum(numpy_outputs != numpy_labels)
 
                         if phase == 'train':
                             loss.backward()
@@ -304,20 +307,21 @@ def bubble_image():
                             # writer.add_scalar('loss', loss.item(), total_step)
                             # writer.add_scalar('accuracy', corrects.item() / len(labels), total_step)
                             progress_bar.set_description(
-                                'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Epoch %d/%d' %
-                                (step, num_steps, loss.item(), corrects.item() / len(labels), epoch, FLAGS.epochs)
+                                'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Accuracy %%: %.4f%%, Epoch %d/%d' %
+                                (step, num_steps, loss.item(), corrects, corrects / float(corrects + incorrects), epoch, FLAGS.epochs)
                             )
                             if step % 10 == 0:
                                 WANDB.log({
-                                    'Training Total Loss': loss.item(),
-                                    'Training Total Accuracy': corrects.item(),
-                                    'Training Incorrect Zero Guesses': incorrect_zeros.item(),
-                                    # 'Training Correct Guesses': predindex.pred_correct / running_count,
-                                    'Training Incorrect One Guesses': incorrect_ones.item(),
-                                    'Training Ones': num_ones
+                                    'Training Loss': loss.item(),
+                                    'Training Accuracy': corrects,
+                                    'Training Accuracy Precent': corrects / float(corrects + incorrects),
+                                    # 'Training Incorrect Zero Guesses': incorrect_zeros.item(),
+                                    # # 'Training Correct Guesses': predindex.pred_correct / running_count,
+                                    # 'Training Incorrect One Guesses': incorrect_ones.item(),
+                                #     'Training Ones': num_ones
                                 })
                             if torch.isnan(loss):
-                                # print("Gradient Explosion, restart run")
+                                print("Gradient Explosion, restart run")
                                 sys.exit(1)
                         else:
                             progress_bar.set_description(
@@ -326,11 +330,12 @@ def bubble_image():
                             )
                             if step % 10 == 0:
                                 WANDB.log({
-                                    'Eval Total Loss': loss.item(),
-                                    'Eval Total Accuracy': corrects.item(),
-                                    'Eval Incorrect Zero Guesses': incorrect_zeros.item(),
+                                    'Eval Loss': loss.item(),
+                                    'Eval Accuracy': corrects,
+                                    'Eval Accuracy Precent': corrects / float(corrects + incorrects),
+                                    # 'Eval Incorrect Zero Guesses': incorrect_zeros.item(),
                                     # 'Eval Correct Guesses': predindex.pred_correct,
-                                    'Eval Incorrect One Guesses': incorrect_ones.item(),
+                                    # 'Eval Incorrect One Guesses': incorrect_ones.item(),
                                 })
                 
                     running_loss += loss.item() * sequences.size(0)
