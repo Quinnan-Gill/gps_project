@@ -300,6 +300,15 @@ def bubble_image():
                         corrects = np.sum(numpy_outputs == numpy_labels)
                         incorrects = np.sum(numpy_outputs != numpy_labels)
 
+                        correct_ones = np.sum(
+                            numpy_outputs == numpy_labels
+                            and numpy_labels == 1
+                        )
+                        incorrect_ones = np.sum(
+                            numpy_outputs != numpy_labels
+                            and numpy_labels == 1
+                        )
+
                         if phase == 'train':
                             loss.backward()
                             optimizer.step()
@@ -315,6 +324,8 @@ def bubble_image():
                                     'Training Loss': loss.item(),
                                     'Training Accuracy': corrects,
                                     'Training Accuracy Precent': corrects / float(corrects + incorrects),
+                                    'Training Accuracy for ones': correct_ones,
+                                    'Training Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones)
                                     # 'Training Incorrect Zero Guesses': incorrect_zeros.item(),
                                     # # 'Training Correct Guesses': predindex.pred_correct / running_count,
                                     # 'Training Incorrect One Guesses': incorrect_ones.item(),
@@ -333,6 +344,8 @@ def bubble_image():
                                     'Eval Loss': loss.item(),
                                     'Eval Accuracy': corrects,
                                     'Eval Accuracy Precent': corrects / float(corrects + incorrects),
+                                    'Eval Accuracy for ones': correct_ones,
+                                    'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones)
                                     # 'Eval Incorrect Zero Guesses': incorrect_zeros.item(),
                                     # 'Eval Correct Guesses': predindex.pred_correct,
                                     # 'Eval Incorrect One Guesses': incorrect_ones.item(),
