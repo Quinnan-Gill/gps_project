@@ -25,10 +25,13 @@ from utils import (
 )
 from datasets import (
     BubbleDataset,
-    BubbleDatasetFTP,
     TEC_MEASUREMENTS,
     IBI_MEASUREMENT,
     expand_measurements,
+)
+
+from expanded_datasets import (
+    BubbleDatasetExpanded
 )
 # from models import KeywordSearch
 from keywordsearch import UNet, dice_loss
@@ -57,12 +60,17 @@ flags.DEFINE_integer('prefetch', 5000, 'How much to cache for the data')
 flags.DEFINE_string('message', '', 'Message for wandb')
 flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
-flags.DEFINE_enum('dataset', 'bubble_dataset', ['bubble_dataset', 'expanded_dataset'])
+flags.DEFINE_enum('dataset', 'bubble_dataset', ['bubble_dataset', 'expanded_dataset'], 'What dataset is being used')
 flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
 
 IMAGE_DIR = "./images/"
 LOOP_BREAK = 1000
+
+DATASET_DICT = {
+    'bubble_dataset': BubbleDataset,
+    'expanded_dataset': BubbleDatasetExpanded
+}
 
 def one_count(labels):
     num_ones = 0
@@ -162,7 +170,7 @@ def bubble_image():
     else:
         image_capture = MagicMock()
 
-    train_dataset = BubbleDataset(
+    train_dataset = DATASET_DICT[FLAGS.dataset](
         start_time=_decode_time_str(FLAGS.start_train_time),
         end_time=_decode_time_str(FLAGS.end_train_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
@@ -178,7 +186,7 @@ def bubble_image():
         num_workers=1
     )
     
-    val_dataset = BubbleDataset(
+    val_dataset = DATASET_DICT[FLAGS.dataset](
         start_time=_decode_time_str(FLAGS.start_val_time),
         end_time=_decode_time_str(FLAGS.end_val_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],

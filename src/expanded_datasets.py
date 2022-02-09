@@ -59,22 +59,14 @@ URI = "https://swarm-diss.eo.esa.int/?do=download&file="
 
 FLAGS = flags.FLAGS
 
-# val_dataset = BubbleDatasetExpanded(
-#         start_time=_decode_time_str(FLAGS.start_val_time),
-#         end_time=_decode_time_str(FLAGS.end_val_time),
-#         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
-#         window_size=FLAGS.window_size,
-#         step_size=FLAGS.step_size,
-#         index_filter=None,
-#         prefetch=FLAGS.prefetch
-#     )
-
-flags.DEFINE_string('start_val_time', '2016_01_01', 'The start datetime for evaluation')
-flags.DEFINE_string('end_val_time', '2016_01_02', 'The end datetime for evaluation')
-flags.DEFINE_integer('window_size', 120, 'How large the time window will be')
-flags.DEFINE_integer('step_size', 120, 'How much the window shifts')
-flags.DEFINE_integer('prefetch', 5000, 'How much to cache for the data')
-flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
+# The `ds_` prefix to all the commands is in order to avoid naming
+# conflicts when using the CNN or RNN absl` 
+flags.DEFINE_string('ds_start_val_time', '2016_01_01', 'The start datetime for evaluation')
+flags.DEFINE_string('ds_end_val_time', '2016_01_02', 'The end datetime for evaluation')
+flags.DEFINE_integer('ds_window_size', 120, 'How large the time window will be')
+flags.DEFINE_integer('ds_step_size', 120, 'How much the window shifts')
+flags.DEFINE_integer('ds_prefetch', 5000, 'How much to cache for the data')
+flags.DEFINE_enum('ds_label', 'index', IBI_MEASUREMENT.keys(),
                     'Specifies the label for calculating the loss')
 flags.DEFINE_boolean('fetch_data', False, help='If fetching data from the FTP or not')
 
@@ -451,23 +443,23 @@ class BubbleDatasetExpanded(Dataset):
 def get_data():
     if FLAGS.fetch_data:
         BubbleDatasetExpandedFTP(
-            start_time=_decode_time_str(FLAGS.start_val_time),
-            end_time=_decode_time_str(FLAGS.end_val_time),
-            bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
-            window_size=FLAGS.window_size,
-            step_size=FLAGS.step_size,
+            start_time=_decode_time_str(FLAGS.ds_start_val_time),
+            end_time=_decode_time_str(FLAGS.ds_end_val_time),
+            bubble_measurements=IBI_MEASUREMENT[FLAGS.ds_label],
+            window_size=FLAGS.ds_window_size,
+            step_size=FLAGS.ds_step_size,
             # index_filter=None,
-            prefetch=FLAGS.prefetch
+            prefetch=FLAGS.ds_prefetch
         )
     else:
         values = BubbleDatasetExpanded(
-            start_time=_decode_time_str(FLAGS.start_val_time),
-            end_time=_decode_time_str(FLAGS.end_val_time),
-            bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
-            window_size=FLAGS.window_size,
-            step_size=FLAGS.step_size,
+            start_time=_decode_time_str(FLAGS.ds_start_val_time),
+            end_time=_decode_time_str(FLAGS.ds_end_val_time),
+            bubble_measurements=IBI_MEASUREMENT[FLAGS.ds_label],
+            window_size=FLAGS.ds_window_size,
+            step_size=FLAGS.ds_step_size,
             # index_filter=None,
-            prefetch=FLAGS.prefetch
+            prefetch=FLAGS.ds_prefetch
         )
 
         values.get_column_size()
