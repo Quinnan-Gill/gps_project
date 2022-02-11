@@ -35,3 +35,5 @@ python src/bubble_prediction.py --link --start_time=2016_01_01 --end_time=2016_1
 ```
 python src/bubble_image.py --link --end_train_time 2016_10_01 --epochs 5
 ```
+
+python src/bubble_image.py --end_train_time 2016_01_07 --epochs 5 --dataset expanded_dataset --start_val_time 2016_01_08 --end_val_time 2016_01_10

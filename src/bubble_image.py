@@ -1,3 +1,4 @@
+from multiprocessing.sharedctypes import Value
 import random
 import copy
 import os
@@ -151,7 +152,13 @@ class ImageCapture:
 
 
 def sentence_to_image(sentence):
-    batch_size, sentence_len, channels = sentence.size()
+    if len(sentence.size()) == 3:
+        batch_size, sentence_len, channels = sentence.size()
+    elif len(sentence.size()) == 2:
+        batch_size, sentence_len = sentence.size()
+        channels = 1
+    else:
+        raise ValueError("Not 3 or 2 for sentence to image")
     
     image_len = int(sentence_len ** 0.5)
 
