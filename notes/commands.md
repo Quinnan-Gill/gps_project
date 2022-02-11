@@ -31,3 +31,7 @@ bridges2-login013
 ```
 python src/bubble_prediction.py --link --start_time=2016_01_01 --end_time=2016_12_31 --message=year
 ```
+
+```
+python src/bubble_image.py --link --end_train_time 2016_10_01 --epochs 5
+```

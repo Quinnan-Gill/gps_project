@@ -208,10 +208,12 @@ def bubble_image():
     
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
+    cnn_type = "CNN" if FLAGS.dataset == "bubble_dataset" else "expanded_CNN"
+
     experiment_name = 'experiments/{}_{}_{}.h_{}'.format(
         FLAGS.experiment_name,
         FLAGS.label,
-        "CNN",
+        cnn_type,
         FLAGS.hidden_size
     )
 
@@ -299,6 +301,7 @@ def bubble_image():
 
                         corrects = np.sum(numpy_outputs == numpy_labels)
                         incorrects = np.sum(numpy_outputs != numpy_labels)
+                        num_ones = np.sum(numpy_labels == 1)
 
                         correct_ones = np.sum(
                             np.logical_and(
@@ -329,7 +332,8 @@ def bubble_image():
                                     'Training Accuracy': corrects,
                                     'Training Accuracy Precent': corrects / float(corrects + incorrects),
                                     'Training Accuracy for ones': correct_ones,
-                                    'Training Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones)
+                                    'Training Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
+                                    'Training Num Ones': num_ones,
                                     # 'Training Incorrect Zero Guesses': incorrect_zeros.item(),
                                     # # 'Training Correct Guesses': predindex.pred_correct / running_count,
                                     # 'Training Incorrect One Guesses': incorrect_ones.item(),
@@ -349,7 +353,8 @@ def bubble_image():
                                     'Eval Accuracy': corrects,
                                     'Eval Accuracy Precent': corrects / float(corrects + incorrects),
                                     'Eval Accuracy for ones': correct_ones,
-                                    'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones)
+                                    'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
+                                    'Num Ones': num_ones,
                                     # 'Eval Incorrect Zero Guesses': incorrect_zeros.item(),
                                     # 'Eval Correct Guesses': predindex.pred_correct,
                                     # 'Eval Incorrect One Guesses': incorrect_ones.item(),
