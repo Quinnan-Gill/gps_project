@@ -301,12 +301,16 @@ def bubble_image():
                         incorrects = np.sum(numpy_outputs != numpy_labels)
 
                         correct_ones = np.sum(
-                            numpy_outputs == numpy_labels
-                            and numpy_labels == 1
+                            np.logical_and(
+                                numpy_outputs == numpy_labels,
+                                numpy_labels == 1
+                            )
                         )
                         incorrect_ones = np.sum(
-                            numpy_outputs != numpy_labels
-                            and numpy_labels == 1
+                            np.logical_and(
+                                numpy_outputs != numpy_labels,
+                                numpy_labels == 1
+                            )
                         )
 
                         if phase == 'train':
