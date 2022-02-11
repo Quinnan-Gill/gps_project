@@ -37,3 +37,6 @@ python src/bubble_image.py --link --end_train_time 2016_10_01 --epochs 5
 ```
 
 python src/bubble_image.py --end_train_time 2016_01_07 --epochs 5 --dataset expanded_dataset --start_val_time 2016_01_08 --end_val_time 2016_01_10
+
+(Pdb) labels.shape
+torch.Size([1564, 1, 16, 16])

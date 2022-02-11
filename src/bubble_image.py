@@ -295,8 +295,6 @@ def bubble_image():
                     with torch.set_grad_enabled(phase == 'train'):
                         outputs = model(sequences)
 
-                        num_ones = one_count(labels)
-
                         loss = criterion(outputs, labels.squeeze(1))
                         # predindex = safe_bincount(torch.bincount(
                         #     torch.flatten(

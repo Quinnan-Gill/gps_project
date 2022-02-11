@@ -434,7 +434,7 @@ class BubbleDatasetExpanded(Dataset):
             end_index = (start_index + self.window_size)
 
             history = self.history[start_index:end_index].astype(np.float32)
-            label = self.label[start_index:end_index]
+            label = self.label[start_index:end_index].astype(np.float32)
 
         return history, label
 
