@@ -156,6 +156,7 @@ def sentence_to_image(sentence):
         batch_size, sentence_len, channels = sentence.size()
     elif len(sentence.size()) == 2:
         batch_size, sentence_len = sentence.size()
+        sentence = sentence.unsqueeze(2)
         channels = 1
     else:
         raise ValueError("Not 3 or 2 for sentence to image")
