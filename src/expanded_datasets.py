@@ -393,6 +393,7 @@ class BubbleDatasetExpanded(Dataset):
 
             if not data_df_set:
                 self.data_df = pd.read_parquet(datafile)
+                data_df_set = True
             else:
                 new_df = pd.read_parquet(datafile)
                 self.data_df = pd.concat([self.data_df, new_df])
