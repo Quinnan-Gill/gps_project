@@ -407,6 +407,7 @@ class BubbleDatasetExpanded(Dataset):
             self.data_df[col] = self.data_df[col]  / self.data_df[col].abs().max()
 
         self.data_df = self.data_df.replace(np.nan, 0.0)
+        self.data_df = self.data_df[self.data_df["buble_index"] not in self.index_filter]
 
         self.size = len(self.data_df)
         print("-" * 20)

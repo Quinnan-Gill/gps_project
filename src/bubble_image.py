@@ -65,6 +65,7 @@ flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
 flags.DEFINE_enum('dataset', 'bubble_dataset', ['bubble_dataset', 'expanded_dataset'], 'What dataset is being used')
 flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
+flags.DEFINE_list('index_filters', [-1], 'The bubble index values being filtered out')
 
 IMAGE_DIR = "./images/"
 LOOP_BREAK = 1000
@@ -185,7 +186,7 @@ def bubble_image():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
-        index_filter=None,
+        index_filter=FLAGS.index_filter,
         prefetch=FLAGS.prefetch,
     )
     train_loader = DataLoader(
@@ -201,7 +202,7 @@ def bubble_image():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
-        index_filter=None,
+        index_filter=FLAGS.index_filter,
         prefetch=FLAGS.prefetch
     )
     val_loader = DataLoader(
