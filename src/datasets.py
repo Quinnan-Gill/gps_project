@@ -405,7 +405,7 @@ class BubbleDataset(Dataset):
             self.index_filter = index_filter
         else:
             self.index_filter = [-1]
-        assert isinstance(self.index, list)
+        assert isinstance(self.index_filter, list)
 
         self.time_diff = timedelta(days=1)
         self.window_size = window_size

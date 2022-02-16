@@ -186,7 +186,7 @@ def bubble_image():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
-        index_filter=FLAGS.index_filter,
+        index_filter=FLAGS.index_filters,
         prefetch=FLAGS.prefetch,
     )
     train_loader = DataLoader(
@@ -202,7 +202,7 @@ def bubble_image():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
-        index_filter=FLAGS.index_filter,
+        index_filter=FLAGS.index_filters,
         prefetch=FLAGS.prefetch
     )
     val_loader = DataLoader(
