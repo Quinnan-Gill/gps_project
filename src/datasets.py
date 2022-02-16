@@ -16,7 +16,7 @@ from sqlalchemy.sql.functions import func
 from torch.utils.data import Dataset
 from viresclient import SwarmRequest, ReturnedData
 from datetime import datetime, timedelta
-from sqlalchemy import and_
+from sqlalchemy import and_, not_
 from sqlalchemy.inspection import inspect
 import pandas as pd
 
@@ -420,7 +420,8 @@ class BubbleDataset(Dataset):
         data_filter = and_(
             DataMeasurement.timestamp >= self.start_time,
             DataMeasurement.timestamp <= self.end_time,
-            DataMeasurement.bubble_index != -1
+            # DataMeasurement.bubble_index != -1
+            not_(DataMeasurement.bubble_index.in_(self.index_filter))
         )
 
         self.history_subquery = session.query(*self.history_cols).filter(
@@ -444,9 +445,6 @@ class BubbleDataset(Dataset):
         self.history = None
         self.label = None
         self.__cache_data(10)
-
-        # import pdb
-        # pdb.set_trace()
 
         print("Data set is of size: {}".format(self.size))
 
