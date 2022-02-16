@@ -180,13 +180,15 @@ def bubble_image():
     else:
         image_capture = MagicMock()
 
+    index_filter = [int(i_filt) for i_filt in FLAGS.index_filters]
+
     train_dataset = DATASET_DICT[FLAGS.dataset](
         start_time=_decode_time_str(FLAGS.start_train_time),
         end_time=_decode_time_str(FLAGS.end_train_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
-        index_filter=FLAGS.index_filters,
+        index_filter=index_filter,
         prefetch=FLAGS.prefetch,
     )
     train_loader = DataLoader(
@@ -202,7 +204,7 @@ def bubble_image():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
-        index_filter=FLAGS.index_filters,
+        index_filter=index_filter,
         prefetch=FLAGS.prefetch
     )
     val_loader = DataLoader(
