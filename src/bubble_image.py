@@ -393,9 +393,7 @@ def bubble_image():
                         best_acc = epoch_acc
                         best_model = copy.deepcopy(model.state_dict())
                         # model_copy = copy.deepcopy(model.state_dict())
-                        torch.save({
-                            'model': best_model,
-                        }, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
+                        torch.save(best_model, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
 
     except KeyboardInterrupt:
         pass
