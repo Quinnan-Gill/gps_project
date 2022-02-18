@@ -66,6 +66,7 @@ flags.DEFINE_enum('dataset', 'bubble_dataset', ['bubble_dataset', 'expanded_data
 flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
 flags.DEFINE_list('index_filters', [-1], 'The bubble index values being filtered out')
+flags.DEFINE_string('model_path', '', 'The model path to be transferred from')
 
 IMAGE_DIR = "./images/"
 LOOP_BREAK = 1000
@@ -247,6 +248,8 @@ def bubble_image():
         val_dataset.get_column_size(),
         2
     )
+    if FLAGS.model_path:
+        model.load_state_dict(torch.load(FLAGS.model_path))
 
     model.to(device)
     WANDB.watch(model, log=None)
