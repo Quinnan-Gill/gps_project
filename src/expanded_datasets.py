@@ -32,7 +32,8 @@ from sql_models import (
 from sql_models import DataMeasurement
 from utils import _decode_time_str
 
-DATA_DIR = "src/data"
+basedir = os.path.abspath(os.path.dirname(__file__))
+DATA_DIR = os.path.join(basedir, 'data/')
 TEC_COLLECTION = "SW_OPER_TECATMS_2F"
 
 IBI_COLLECTION = "SW_OPER_IBIATMS_2F"
@@ -339,7 +340,7 @@ class BubbleDatasetExpandedFTP(Dataset):
 
             
             exp_file = zip_file.zip_file.replace("/", "_").replace(".ZIP", ".parquet")
-            data_df.to_parquet(f"data/{exp_file}")
+            data_df.to_parquet(f"{DATA_DIR}/{exp_file}")
             
             for zip_file in zip_range:
                 zip_file.processed = True
