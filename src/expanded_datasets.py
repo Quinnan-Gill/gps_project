@@ -302,7 +302,6 @@ class BubbleDatasetExpandedFTP(Dataset):
                 ibi_df = ibi_df[ibi_df.bubble_index != -1]
 
             data = pd.merge(tec_df, ibi_df, left_index=True, right_index=True)
-            data = data.head()
             data = data.reset_index()
 
             def count_leo_groups(grouped_df):
