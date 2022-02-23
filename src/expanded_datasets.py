@@ -32,7 +32,7 @@ from sql_models import (
 from sql_models import DataMeasurement
 from utils import _decode_time_str
 
-DATA_DIR = "data"
+DATA_DIR = "src/data"
 TEC_COLLECTION = "SW_OPER_TECATMS_2F"
 
 IBI_COLLECTION = "SW_OPER_IBIATMS_2F"
