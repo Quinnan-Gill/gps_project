@@ -1,12 +1,10 @@
 """
 This dataset collects all the data points on the 
 """
-import collections
-import enum
 import os
 import hashlib
 import io
-from re import S
+import sys
 from typing import List
 import requests
 import cdflib
@@ -343,7 +341,7 @@ class BubbleDatasetExpandedFTP(Dataset):
             
             for zip_file in zip_range:
                 zip_file.processed = True
-                zip_file.data_file = f"data/{exp_file}"
+                zip_file.data_file = f"{DATA_DIR}/{exp_file}"
                 zip_file.data_size = len(data_df)
             session.commit()
 
@@ -383,7 +381,11 @@ class BubbleDatasetExpanded(Dataset):
                     ViresMetaData.end_time <= self.end_time
                 )
             )
-        ).all()      
+        ).all()     
+
+        if len(self.vires_data_files) == 0:
+            print(f"Missing data for range {start_time} to {end_time}")
+            sys.exit(1)
 
         self.data_df = None
         data_df_set = False

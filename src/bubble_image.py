@@ -35,8 +35,7 @@ from datasets import (
 from expanded_datasets import (
     BubbleDatasetExpanded
 )
-# from models import KeywordSearch
-from keywordsearch import UNet, dice_loss
+from cnn_model import UNet
 
 import wandb
 
@@ -65,6 +64,7 @@ flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
 flags.DEFINE_enum('dataset', 'bubble_dataset', ['bubble_dataset', 'expanded_dataset'], 'What dataset is being used')
 flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
+flags.DEFINE_float('loss_threshold', 0.2, '')
 
 IMAGE_DIR = "./images/"
 LOOP_BREAK = 1000
