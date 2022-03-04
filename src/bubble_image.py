@@ -309,11 +309,11 @@ def bubble_image():
                         #print(sequences.size())
                         loss = criterion(outputs, sequences)
 
-                        # predindex = safe_bincount(torch.bincount(
-                        #     torch.flatten(
-                        #         torch.subtract(outputs.max(1)[1], labels.squeeze(1))
-                        #     ) + 1
-                        # ), device)
+                        predindex = safe_bincount(torch.bincount(
+                            torch.flatten(
+                                torch.subtract(outputs.max(1)[1], labels.squeeze(1))
+                            ) + 1
+                        ), device)
                         
                         # numpy_outputs = outputs.max(1)[1].cpu().numpy()
                         # numpy_labels = labels.squeeze(1).cpu().numpy()
@@ -339,9 +339,13 @@ def bubble_image():
                             loss.backward()
                             optimizer.step()
 
+                            # progress_bar.set_description(
+                            #     'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Accuracy %%: %.4f%%, Epoch %d/%d' %
+                            #     (step, num_steps, loss.item(), corrects, corrects / float(corrects + incorrects), epoch, FLAGS.epochs)
+                            # )
                             progress_bar.set_description(
-                                'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Accuracy %%: %.4f%%, Epoch %d/%d' %
-                                (step, num_steps, loss.item(), corrects, corrects / float(corrects + incorrects), epoch, FLAGS.epochs)
+                                'Step: %d/%d, Loss: %.4f, Epoch %d/%d' %
+                                (step, num_steps, loss.item(), epoch, FLAGS.epochs)
                             )
                             if step % 10 == 0:
                                 WANDB.log({
@@ -356,9 +360,13 @@ def bubble_image():
                                 print("Gradient Explosion, restart run")
                                 sys.exit(1)
                         else:
+                            # progress_bar.set_description(
+                            #     'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Epoch %d/%d' %
+                            #     (step, num_steps, loss.item(), corrects.item(), epoch, FLAGS.epochs)
+                            # )
                             progress_bar.set_description(
-                                'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Epoch %d/%d' %
-                                (step, num_steps, loss.item(), corrects.item(), epoch, FLAGS.epochs)
+                                'Step: %d/%d, Loss: %.4f, Epoch %d/%d' %
+                                (step, num_steps, loss.item(), epoch, FLAGS.epochs)
                             )
                             if step % 10 == 0:
                                 WANDB.log({
