@@ -68,6 +68,7 @@ flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be 
 flags.DEFINE_list('index_filters', [-1], 'The bubble index values being filtered out')
 flags.DEFINE_string('model_path', '', 'The model path to be transferred from')
 flags.DEFINE_string('model_type', 'cnn', 'The type of the model')
+flags.DEFINE_boolean('only_eval', False, 'Only do evaluation')
 
 
 IMAGE_DIR = "./images/"
@@ -268,8 +269,12 @@ def bubble_image():
     )
     best_acc = 0.0
 
+    phases = ('train', 'eval')
+    if FLAGS.only_eval:
+        phases = ('eval')
+
     try:
-        for phase in ('train', 'eval'):
+        for phase in phases:
             if phase == 'train':
                 model.train()
                 dataset = train_dataset
