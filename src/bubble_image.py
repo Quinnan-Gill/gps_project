@@ -64,7 +64,10 @@ flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
 flags.DEFINE_enum('dataset', 'bubble_dataset', ['bubble_dataset', 'expanded_dataset'], 'What dataset is being used')
 flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
+flags.DEFINE_list('index_filters', [-1], 'The bubble index values being filtered out')
+flags.DEFINE_string('model_path', '', 'The model path to be transferred from')
 flags.DEFINE_float('loss_threshold', 0.2, '')
+
 
 IMAGE_DIR = "./images/"
 LOOP_BREAK = 1000
@@ -179,13 +182,15 @@ def bubble_image():
     else:
         image_capture = MagicMock()
 
+    index_filter = [int(i_filt) for i_filt in FLAGS.index_filters]
+
     train_dataset = DATASET_DICT[FLAGS.dataset](
         start_time=_decode_time_str(FLAGS.start_train_time),
         end_time=_decode_time_str(FLAGS.end_train_time),
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
-        index_filter=None,
+        index_filter=index_filter,
         prefetch=FLAGS.prefetch,
     )
     train_loader = DataLoader(
@@ -201,7 +206,7 @@ def bubble_image():
         bubble_measurements=IBI_MEASUREMENT[FLAGS.label],
         window_size=FLAGS.window_size ** 2,
         step_size=FLAGS.step_size,
-        index_filter=None,
+        index_filter=index_filter,
         prefetch=FLAGS.prefetch
     )
     val_loader = DataLoader(
@@ -244,6 +249,8 @@ def bubble_image():
         val_dataset.get_column_size(),
         2
     )
+    if FLAGS.model_path:
+        model.load_state_dict(torch.load(FLAGS.model_path))
 
     model.to(device)
     WANDB.watch(model, log=None)
@@ -387,9 +394,7 @@ def bubble_image():
                         best_acc = epoch_acc
                         best_model = copy.deepcopy(model.state_dict())
                         # model_copy = copy.deepcopy(model.state_dict())
-                        torch.save({
-                            'model': best_model,
-                        }, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
+                        torch.save(best_model, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
 
     except KeyboardInterrupt:
         pass

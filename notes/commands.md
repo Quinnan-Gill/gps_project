@@ -40,3 +40,7 @@ python src/bubble_image.py --end_train_time 2016_01_07 --epochs 5 --dataset expa
 
 (Pdb) labels.shape
 torch.Size([1564, 1, 16, 16])
+
+```
+python src/bubble_image.py --end_train_time 2016_01_20 --start_val_time 2016_01_21 --end_val_time 2016_01_30 --index_filters="1,-1" --epochs=25 --dataset expanded_dataset --experiment_name transfer_expanded --message transfer_expanded --model_path experiments/only_zeros_expanded_index_expanded_CNN.h_50/model_epoch_1.pt
+```

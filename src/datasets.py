@@ -401,7 +401,11 @@ class BubbleDataset(Dataset):
         self.start_time = start_time
         self.end_time = end_time
         self.prefetch = prefetch
-        self.index_filter = index_filter
+        if index_filter:
+            self.index_filter = index_filter
+        else:
+            self.index_filter = [-1]
+        assert isinstance(self.index_filter, list)
 
         self.time_diff = timedelta(days=1)
         self.window_size = window_size
