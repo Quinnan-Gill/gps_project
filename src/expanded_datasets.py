@@ -60,8 +60,8 @@ FLAGS = flags.FLAGS
 
 # The `ds_` prefix to all the commands is in order to avoid naming
 # conflicts when using the CNN or RNN absl` 
-flags.DEFINE_string('ds_start_val_time', '2016_01_01', 'The start datetime for evaluation')
-flags.DEFINE_string('ds_end_val_time', '2016_01_02', 'The end datetime for evaluation')
+flags.DEFINE_string('ds_start_val_time', '2017_01_01', 'The start datetime for evaluation')
+flags.DEFINE_string('ds_end_val_time', '2017_01_02', 'The end datetime for evaluation')
 flags.DEFINE_integer('ds_window_size', 120, 'How large the time window will be')
 flags.DEFINE_integer('ds_step_size', 120, 'How much the window shifts')
 flags.DEFINE_integer('ds_prefetch', 5000, 'How much to cache for the data')

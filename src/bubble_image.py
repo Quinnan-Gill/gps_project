@@ -36,6 +36,7 @@ from expanded_datasets import (
     BubbleDatasetExpanded
 )
 from cnn_model import UNet
+from autoenc_model import AutoEnc
 
 import wandb
 
@@ -64,7 +65,7 @@ flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
 flags.DEFINE_enum('dataset', 'bubble_dataset', ['bubble_dataset', 'expanded_dataset'], 'What dataset is being used')
 flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
-flags.DEFINE_float('loss_threshold', 0.2, '')
+#flags.DEFINE_float('loss_threshold', 0.2, '')
 
 IMAGE_DIR = "./images/"
 LOOP_BREAK = 1000
@@ -240,10 +241,11 @@ def bubble_image():
         reinit=True
     )
 
-    model = UNet(
-        val_dataset.get_column_size(),
-        2
-    )
+    #model = UNet(
+    #    val_dataset.get_column_size(),
+    #    2
+    #)
+    model = AutoEnc(n_channels=val_dataset.get_column_size())
 
     model.to(device)
     WANDB.watch(model, log=None)
@@ -251,7 +253,9 @@ def bubble_image():
     print("Device: {}".format(device))
     print('Model Architecture:\n%s' % model)
 
-    criterion = nn.CrossEntropyLoss(reduction='mean')
+    #criterion = nn.CrossEntropyLoss(reduction='mean')
+    criterion = nn.MSELoss()
+ 
     optimizer = torch.optim.Adam(
         model.parameters(),
         lr=FLAGS.learning_rate,
@@ -295,7 +299,11 @@ def bubble_image():
                     with torch.set_grad_enabled(phase == 'train'):
                         outputs = model(sequences)
 
-                        loss = criterion(outputs, labels.squeeze(1))
+                        #loss = criterion(outputs, labels.squeeze(1))
+                        #print(outputs.size())
+                        #print(sequences.size())
+                        loss = criterion(outputs, sequences)
+
                         # predindex = safe_bincount(torch.bincount(
                         #     torch.flatten(
                         #         torch.subtract(outputs.max(1)[1], labels.squeeze(1))

@@ -21,15 +21,15 @@ class TDoubleConv(nn.Module):
         return self.double_conv(x)
 
 class AutoEnc(nn.Module):
-    def __init__(self, n_channels, n_classes, embedding_size=16):
+    def __init__(self, n_channels, n_classes=2, embedding_size=16):
         super(AutoEnc, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
 
         self.inc = DoubleConv(n_channels, 128)
-        self.enc1 = Down(128, 64)
-        self.enc2 = Down(64, 32)
-        self.enc3 = Down(32, 16)
+        self.enc1 = DoubleConv(128, 64)
+        self.enc2 = DoubleConv(64, 32)
+        self.enc3 = DoubleConv(32, 16)
 
         self.fc1 = nn.Linear(16, embedding_size)
         self.fc2 = nn.Linear(embedding_size, 16)
@@ -43,14 +43,18 @@ class AutoEnc(nn.Module):
         # self.outc = OutConv(64, n_classes)
 
     def forward(self, x):
+
         encoding_output1 = self.inc(x)
+
         encoding_output2 = self.enc1(encoding_output1)
+
         encoding_output3 = self.enc2(encoding_output2)
+
         encoding_output4 = self.enc3(encoding_output3)
 
         fc_output1 = self.fc1(encoding_output4)
         fc_output2 = self.fc2(fc_output1)
-
+        
         decoding_output1 = self.decode1(fc_output2)
         decoding_output2 = self.decode2(decoding_output1)
         decoding_output3 = self.decode3(decoding_output2)
