@@ -308,12 +308,6 @@ def bubble_image():
                         #print(outputs.size())
                         #print(sequences.size())
                         loss = criterion(outputs, sequences)
-
-                        predindex = safe_bincount(torch.bincount(
-                            torch.flatten(
-                                torch.subtract(outputs.max(1)[1], labels.squeeze(1))
-                            ) + 1
-                        ), device)
                         
                         # numpy_outputs = outputs.max(1)[1].cpu().numpy()
                         # numpy_labels = labels.squeeze(1).cpu().numpy()
@@ -379,27 +373,27 @@ def bubble_image():
                                 })
                 
                     running_loss += loss.item() * sequences.size(0)
-                    running_corrects += corrects
-                    running_total += float(corrects + incorrects)
+                    # running_corrects += corrects
+                    # running_total += float(corrects + incorrects)
 
                 epoch_loss = running_loss
-                epoch_acc = running_corrects
-                epoch_acc_percent = running_corrects / running_total
+                # epoch_acc = running_corrects
+                # epoch_acc_percent = running_corrects / running_total
                 if phase == 'train':
                     WANDB.log({
-                        "Epoch Training Accurancy": epoch_acc,
                         "Epoch Training Loss": epoch_loss,
-                        "Epoch Training Accuracy Precent": epoch_acc_percent,
+                        # "Epoch Training Accurancy": epoch_acc,
+                        # "Epoch Training Accuracy Precent": epoch_acc_percent,
                     })
                 # print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
                 #             (epoch + 1, phase, epoch_acc, epoch_loss))
                 
                 if phase == 'eval':
-                    if epoch_acc > best_acc:
-                        best_acc = epoch_acc
-                        best_model = copy.deepcopy(model.state_dict())
-                        # model_copy = copy.deepcopy(model.state_dict())
-                        torch.save(best_model, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
+                    # if epoch_acc > best_acc:
+                    # best_acc = epoch_acc
+                    best_model = copy.deepcopy(model.state_dict())
+                    # model_copy = copy.deepcopy(model.state_dict())
+                    torch.save(best_model, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
 
     except KeyboardInterrupt:
         pass
