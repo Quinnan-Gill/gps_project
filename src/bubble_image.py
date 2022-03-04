@@ -315,7 +315,9 @@ def bubble_image():
                         loss = criterion(outputs, sequences)
                         
                         # numpy_outputs = outputs.max(1)[1].cpu().numpy()
-                        # numpy_labels = labels.squeeze(1).cpu().numpy()
+                        numpy_labels = labels.squeeze(1).cpu().numpy()
+
+                        number_ones = np.sum(numpy_labels)
 
                         # corrects = np.sum(numpy_outputs == numpy_labels)
                         # incorrects = np.sum(numpy_outputs != numpy_labels)
@@ -346,15 +348,14 @@ def bubble_image():
                                 'Step: %d/%d, Loss: %.4f, Epoch %d/%d' %
                                 (step, num_steps, loss.item(), epoch, FLAGS.epochs)
                             )
-                            if step % 10 == 0:
-                                WANDB.log({
-                                    'Training Loss': loss.item(),
-                                    # 'Training Accuracy': corrects,
-                                    # 'Training Accuracy Precent': corrects / float(corrects + incorrects),
-                                    # 'Training Accuracy for ones': correct_ones,
-                                    # 'Training Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
-                                    # 'Training Num Ones': num_ones,
-                                })
+                            WANDB.log({
+                                'Training Loss': loss.item(),
+                                # 'Training Accuracy': corrects,
+                                # 'Training Accuracy Precent': corrects / float(corrects + incorrects),
+                                # 'Training Accuracy for ones': correct_ones,
+                                # 'Training Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
+                                # 'Training Num Ones': num_ones,
+                            })
                             if torch.isnan(loss):
                                 print("Gradient Explosion, restart run")
                                 sys.exit(1)
@@ -367,15 +368,15 @@ def bubble_image():
                                 'Step: %d/%d, Loss: %.4f, Epoch %d/%d' %
                                 (step, num_steps, loss.item(), epoch, FLAGS.epochs)
                             )
-                            if step % 10 == 0:
-                                WANDB.log({
-                                    'Eval Loss': loss.item(),
-                                    # 'Eval Accuracy': corrects,
-                                    # 'Eval Accuracy Precent': corrects / float(corrects + incorrects),
-                                    # 'Eval Accuracy for ones': correct_ones,
-                                    # 'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
-                                    # 'Num Ones': num_ones,
-                                })
+                            WANDB.log({
+                                'Eval Loss': loss.item(),
+                                'Eval Number Ones': number_ones,
+                                # 'Eval Accuracy': corrects,
+                                # 'Eval Accuracy Precent': corrects / float(corrects + incorrects),
+                                # 'Eval Accuracy for ones': correct_ones,
+                                # 'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
+                                # 'Num Ones': num_ones,
+                            })
                 
                     running_loss += loss.item() * sequences.size(0)
                     # running_corrects += corrects
