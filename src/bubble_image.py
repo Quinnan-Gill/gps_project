@@ -65,13 +65,9 @@ flags.DEFINE_enum('label', 'index', IBI_MEASUREMENT.keys(),
 flags.DEFINE_enum('dataset', 'bubble_dataset', ['bubble_dataset', 'expanded_dataset'], 'What dataset is being used')
 flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
-<<<<<<< HEAD
-#flags.DEFINE_float('loss_threshold', 0.2, '')
-=======
 flags.DEFINE_list('index_filters', [-1], 'The bubble index values being filtered out')
 flags.DEFINE_string('model_path', '', 'The model path to be transferred from')
 flags.DEFINE_float('loss_threshold', 0.2, '')
->>>>>>> acda6969bbb100228e8b13244e58291ab5a231ed
 
 
 IMAGE_DIR = "./images/"
@@ -250,20 +246,11 @@ def bubble_image():
         reinit=True
     )
 
-<<<<<<< HEAD
     #model = UNet(
     #    val_dataset.get_column_size(),
     #    2
     #)
     model = AutoEnc(n_channels=val_dataset.get_column_size())
-=======
-    model = UNet(
-        val_dataset.get_column_size(),
-        2
-    )
-    if FLAGS.model_path:
-        model.load_state_dict(torch.load(FLAGS.model_path))
->>>>>>> acda6969bbb100228e8b13244e58291ab5a231ed
 
     model.to(device)
     WANDB.watch(model, log=None)
