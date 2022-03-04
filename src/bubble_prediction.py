@@ -31,7 +31,7 @@ from rnn_modules import (
     PeepholedLSTMCell,
     CoupledLSTMCell,
 )
-from models import BubblePredictor
+from rnn_models import BubblePredictor
 
 import wandb
 

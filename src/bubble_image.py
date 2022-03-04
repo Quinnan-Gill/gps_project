@@ -35,8 +35,7 @@ from datasets import (
 from expanded_datasets import (
     BubbleDatasetExpanded
 )
-# from models import KeywordSearch
-from keywordsearch import UNet, dice_loss
+from cnn_model import UNet
 
 import wandb
 
@@ -67,6 +66,8 @@ flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
 flags.DEFINE_list('index_filters', [-1], 'The bubble index values being filtered out')
 flags.DEFINE_string('model_path', '', 'The model path to be transferred from')
+flags.DEFINE_float('loss_threshold', 0.2, '')
+
 
 IMAGE_DIR = "./images/"
 LOOP_BREAK = 1000

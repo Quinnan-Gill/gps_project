@@ -1,12 +1,10 @@
 """
 This dataset collects all the data points on the 
 """
-import collections
-import enum
 import os
 import hashlib
 import io
-from re import S
+import sys
 from typing import List
 import requests
 import cdflib
@@ -32,7 +30,8 @@ from sql_models import (
 from sql_models import DataMeasurement
 from utils import _decode_time_str
 
-DATA_DIR = "data"
+basedir = os.path.abspath(os.path.dirname(__file__))
+DATA_DIR = os.path.join(basedir, 'data/')
 TEC_COLLECTION = "SW_OPER_TECATMS_2F"
 
 IBI_COLLECTION = "SW_OPER_IBIATMS_2F"
@@ -301,7 +300,6 @@ class BubbleDatasetExpandedFTP(Dataset):
                 ibi_df = ibi_df[ibi_df.bubble_index != -1]
 
             data = pd.merge(tec_df, ibi_df, left_index=True, right_index=True)
-            data = data.head()
             data = data.reset_index()
 
             def count_leo_groups(grouped_df):
@@ -339,11 +337,11 @@ class BubbleDatasetExpandedFTP(Dataset):
 
             
             exp_file = zip_file.zip_file.replace("/", "_").replace(".ZIP", ".parquet")
-            data_df.to_parquet(f"data/{exp_file}")
+            data_df.to_parquet(f"{DATA_DIR}/{exp_file}")
             
             for zip_file in zip_range:
                 zip_file.processed = True
-                zip_file.data_file = f"data/{exp_file}"
+                zip_file.data_file = f"{DATA_DIR}/{exp_file}"
                 zip_file.data_size = len(data_df)
             session.commit()
 
@@ -383,7 +381,11 @@ class BubbleDatasetExpanded(Dataset):
                     ViresMetaData.end_time <= self.end_time
                 )
             )
-        ).all()      
+        ).all()     
+
+        if len(self.vires_data_files) == 0:
+            print(f"Missing data for range {start_time} to {end_time}")
+            sys.exit(1)
 
         self.data_df = None
         data_df_set = False
