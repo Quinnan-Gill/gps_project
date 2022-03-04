@@ -67,7 +67,7 @@ flags.DEFINE_boolean('img_capture', False, 'Capture heatmap of the values')
 flags.DEFINE_float('img_threshold', 0.2, 'Percentage of the image needing to be ones')
 flags.DEFINE_list('index_filters', [-1], 'The bubble index values being filtered out')
 flags.DEFINE_string('model_path', '', 'The model path to be transferred from')
-flags.DEFINE_float('loss_threshold', 0.2, '')
+flags.DEFINE_string('model_type', 'cnn', 'The type of the model')
 
 
 IMAGE_DIR = "./images/"
@@ -100,7 +100,7 @@ class ImageCapture:
         self.softmax = nn.Soft
 
         self.image_directory = os.path.join(
-            IMAGE_DIR, f"cnn_{self.flag_string}"
+            IMAGE_DIR, f"{FLAGS.model_type}_{self.flag_string}"
         )
         
         # Create a directory if it does not exist
@@ -222,7 +222,7 @@ def bubble_image():
     
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    cnn_type = "CNN" if FLAGS.dataset == "bubble_dataset" else "expanded_CNN"
+    cnn_type = FLAGS.model_type.upper() if FLAGS.dataset == "bubble_dataset" else f"expanded_{FLAGS.model_type.upper()}"
 
     experiment_name = 'experiments/{}_{}_{}.h_{}'.format(
         FLAGS.experiment_name,
@@ -235,10 +235,10 @@ def bubble_image():
     writer = SummaryWriter(log_dir=experiment_name)
 
     WANDB.init(
-        project="cnn_research",
+        project=f"{FLAGS.model_type}_research",
         name="{}_{}_{}_{}_{}".format(
             FLAGS.label,
-            "CNN",
+            FLAGS.model_type.upper(),
             FLAGS.window_size,
             FLAGS.step_size,
             FLAGS.message,
@@ -315,32 +315,30 @@ def bubble_image():
                         #     ) + 1
                         # ), device)
                         
-                        numpy_outputs = outputs.max(1)[1].cpu().numpy()
-                        numpy_labels = labels.squeeze(1).cpu().numpy()
+                        # numpy_outputs = outputs.max(1)[1].cpu().numpy()
+                        # numpy_labels = labels.squeeze(1).cpu().numpy()
 
-                        corrects = np.sum(numpy_outputs == numpy_labels)
-                        incorrects = np.sum(numpy_outputs != numpy_labels)
-                        num_ones = np.sum(numpy_labels == 1)
+                        # corrects = np.sum(numpy_outputs == numpy_labels)
+                        # incorrects = np.sum(numpy_outputs != numpy_labels)
+                        # num_ones = np.sum(numpy_labels == 1)
 
-                        correct_ones = np.sum(
-                            np.logical_and(
-                                numpy_outputs == numpy_labels,
-                                numpy_labels == 1
-                            )
-                        )
-                        incorrect_ones = np.sum(
-                            np.logical_and(
-                                numpy_outputs != numpy_labels,
-                                numpy_labels == 1
-                            )
-                        )
+                        # correct_ones = np.sum(
+                        #     np.logical_and(
+                        #         numpy_outputs == numpy_labels,
+                        #         numpy_labels == 1
+                        #     )
+                        # )
+                        # incorrect_ones = np.sum(
+                        #     np.logical_and(
+                        #         numpy_outputs != numpy_labels,
+                        #         numpy_labels == 1
+                        #     )
+                        # )
 
                         if phase == 'train':
                             loss.backward()
                             optimizer.step()
 
-                            # writer.add_scalar('loss', loss.item(), total_step)
-                            # writer.add_scalar('accuracy', corrects.item() / len(labels), total_step)
                             progress_bar.set_description(
                                 'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Accuracy %%: %.4f%%, Epoch %d/%d' %
                                 (step, num_steps, loss.item(), corrects, corrects / float(corrects + incorrects), epoch, FLAGS.epochs)
@@ -348,15 +346,11 @@ def bubble_image():
                             if step % 10 == 0:
                                 WANDB.log({
                                     'Training Loss': loss.item(),
-                                    'Training Accuracy': corrects,
-                                    'Training Accuracy Precent': corrects / float(corrects + incorrects),
-                                    'Training Accuracy for ones': correct_ones,
-                                    'Training Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
-                                    'Training Num Ones': num_ones,
-                                    # 'Training Incorrect Zero Guesses': incorrect_zeros.item(),
-                                    # # 'Training Correct Guesses': predindex.pred_correct / running_count,
-                                    # 'Training Incorrect One Guesses': incorrect_ones.item(),
-                                #     'Training Ones': num_ones
+                                    # 'Training Accuracy': corrects,
+                                    # 'Training Accuracy Precent': corrects / float(corrects + incorrects),
+                                    # 'Training Accuracy for ones': correct_ones,
+                                    # 'Training Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
+                                    # 'Training Num Ones': num_ones,
                                 })
                             if torch.isnan(loss):
                                 print("Gradient Explosion, restart run")
@@ -369,14 +363,11 @@ def bubble_image():
                             if step % 10 == 0:
                                 WANDB.log({
                                     'Eval Loss': loss.item(),
-                                    'Eval Accuracy': corrects,
-                                    'Eval Accuracy Precent': corrects / float(corrects + incorrects),
-                                    'Eval Accuracy for ones': correct_ones,
-                                    'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
-                                    'Num Ones': num_ones,
-                                    # 'Eval Incorrect Zero Guesses': incorrect_zeros.item(),
-                                    # 'Eval Correct Guesses': predindex.pred_correct,
-                                    # 'Eval Incorrect One Guesses': incorrect_ones.item(),
+                                    # 'Eval Accuracy': corrects,
+                                    # 'Eval Accuracy Precent': corrects / float(corrects + incorrects),
+                                    # 'Eval Accuracy for ones': correct_ones,
+                                    # 'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
+                                    # 'Num Ones': num_ones,
                                 })
                 
                     running_loss += loss.item() * sequences.size(0)
