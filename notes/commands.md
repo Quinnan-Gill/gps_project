@@ -44,3 +44,8 @@ torch.Size([1564, 1, 16, 16])
 ```
 python src/bubble_image.py --end_train_time 2016_01_20 --start_val_time 2016_01_21 --end_val_time 2016_01_30 --index_filters="1,-1" --epochs=25 --dataset expanded_dataset --experiment_name transfer_expanded --message transfer_expanded --model_path experiments/only_zeros_expanded_index_expanded_CNN.h_50/model_epoch_1.pt
 ```
+
+python src/bubble_image.py --end_train_time 2016_01_02 --start_val_time 2017_01_01 --end_val_time 2017_01_20 --dataset expanded_dataset --experiment_name vae_anom --message vae_anom --model_type vae
+ --model_path experiments/vae_on_zeros_index_expanded_VAE.h_50/model_epoch_20.pt --only_eval --link
+
+ python src/bubble_image.py --end_train_time 2016_01_20 --start_val_time 2016_01_21 --end_val_time 2016_01_30 --index_filters="1,-1" --epochs=25 --dataset expanded_dataset --experiment_name filtered_lr_1e5 --learning_rate 1e-5 --message filtered_lr_1e5 --link

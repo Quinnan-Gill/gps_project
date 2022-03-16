@@ -44,3 +44,15 @@ Find an example and try it out, see how the entire flow is working
 https://sites.wustl.edu/jeffheaton/t81-558/
 
 Ending sentence no likely match possibly orbital location (logitude point)
+
+Last processed:
+```
+2016-01-26 00:00:00 2016-01-26 23:59:59
+2016-01-26 00:00:00 2016-01-26 23:59:59
+```
+
+```
+2017-01-02 00:00:00 2017-01-02 23:59:59
+...
+2017-01-19 00:00:00 2017-01-19 23:59:59
+```
