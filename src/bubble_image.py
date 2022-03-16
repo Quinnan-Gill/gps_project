@@ -356,7 +356,7 @@ def bubble_image():
                                     # 'Training Accuracy for ones': correct_ones,
                                     # 'Training Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
                                     # 'Training Num Ones': num_ones,
-                                }, step=step/10)
+                                }, step=step//10)
                             if torch.isnan(loss):
                                 print("Gradient Explosion, restart run")
                                 sys.exit(1)
@@ -378,7 +378,7 @@ def bubble_image():
                                     # 'Eval Accuracy for ones': correct_ones,
                                     # 'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
                                     # 'Num Ones': num_ones,
-                                }, step=step/10)
+                                }, step=step//10)
                 
                     running_loss += loss.item() * sequences.size(0)
                     # running_corrects += corrects
