@@ -286,7 +286,6 @@ def bubble_image():
             print("Length of dataset for {}: {} {} {}".format(
                 phase, dataset.size, dataset.start_time, dataset.end_time
             ))
-            wandb_index = 0
             for epoch in range(FLAGS.epochs):
                 num_steps = len(data_loader)
                 running_loss = 0.0
@@ -379,8 +378,7 @@ def bubble_image():
                                     # 'Eval Accuracy for ones': correct_ones,
                                     # 'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
                                     # 'Num Ones': num_ones,
-                                }, step=wandb_index)
-                                wandb_index += 1
+                                })
                 
                     running_loss += loss.item() * sequences.size(0)
                     # running_corrects += corrects
@@ -394,7 +392,7 @@ def bubble_image():
                         "Epoch Training Loss": epoch_loss,
                         # "Epoch Training Accurancy": epoch_acc,
                         # "Epoch Training Accuracy Precent": epoch_acc_percent,
-                    }, step=step)
+                    })
                 # print('[Epoch %d] %s accuracy: %.4f, loss: %.4f' %
                 #             (epoch + 1, phase, epoch_acc, epoch_loss))
                 
