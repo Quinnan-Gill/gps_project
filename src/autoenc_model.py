@@ -9,12 +9,12 @@ class TDoubleConv(nn.Module):
         if not mid_channels:
             mid_channels = out_channels
         self.double_conv = nn.Sequential(
-            nn.ConvTranspose2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(mid_channels),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
+            #nn.ConvTranspose2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            #nn.BatchNorm2d(out_channels),
+            #nn.ReLU(inplace=True)
         )
 
     def forward(self, x):
@@ -29,14 +29,14 @@ class AutoEnc(nn.Module):
         self.inc = DoubleConv(n_channels, 128)
         self.enc1 = DoubleConv(128, 64)
         self.enc2 = DoubleConv(64, 32)
-        self.enc3 = DoubleConv(32, 16)
+        #self.enc3 = DoubleConv(32, 16)
 
-        self.fc1 = nn.Linear(16, embedding_size)
-        self.fc2 = nn.Linear(embedding_size, 16)
+        self.fc1 = nn.Linear(32, embedding_size)
+        self.fc2 = nn.Linear(embedding_size, 32)
 
         # factor = 2 if bilinear else 1
         # 
-        self.decode1 = TDoubleConv(16, 32)
+        #self.decode1 = TDoubleConv(16, 32)
         self.decode2 = TDoubleConv(32, 64)
         self.decode3 = TDoubleConv(64, 128)
         self.outc = DoubleConv(128, n_channels)
@@ -50,13 +50,13 @@ class AutoEnc(nn.Module):
 
         encoding_output3 = self.enc2(encoding_output2)
 
-        encoding_output4 = self.enc3(encoding_output3)
+        #encoding_output4 = self.enc3(encoding_output3)
 
-        fc_output1 = self.fc1(encoding_output4)
+        fc_output1 = self.fc1(encoding_output3)
         fc_output2 = self.fc2(fc_output1)
         
-        decoding_output1 = self.decode1(fc_output2)
-        decoding_output2 = self.decode2(decoding_output1)
+        #decoding_output1 = self.decode1(fc_output2)
+        decoding_output2 = self.decode2(fc_output2)
         decoding_output3 = self.decode3(decoding_output2)
 
         logits = self.outc(decoding_output3)
