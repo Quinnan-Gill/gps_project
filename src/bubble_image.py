@@ -69,7 +69,8 @@ flags.DEFINE_list('index_filters', [-1], 'The bubble index values being filtered
 flags.DEFINE_string('model_path', '', 'The model path to be transferred from')
 flags.DEFINE_string('model_type', 'cnn', 'The type of the model')
 flags.DEFINE_boolean('only_eval', False, 'Only do evaluation')
-
+flags.DEFINE_boolean('gen_conf_matrix', False, 'Generates a confusion matrix')
+flags.DEFINE_integer('threshold_stdev', 1, 'The number of standard deviations added onto the mean for the threshold')
 
 IMAGE_DIR = "./images/"
 LOOP_BREAK = 1000
@@ -233,7 +234,6 @@ def bubble_image():
     )
 
     os.makedirs(experiment_name, exist_ok=True)
-    writer = SummaryWriter(log_dir=experiment_name)
 
     WANDB.init(
         project=f"{FLAGS.model_type}_research",
@@ -252,6 +252,18 @@ def bubble_image():
     #    2
     #)
     model = AutoEnc(n_channels=val_dataset.get_column_size())
+    loss_val_mean = 0
+    loss_val_stdev = 0
+    loss_val_len = 0
+
+    if len(FLAGS.model_path) != 0:
+        loaded_model = torch.load(FLAGS.model_path)
+        model.load_state_dict(loaded_model["model"])
+
+        loss_val_mean = loaded_model["mean"]
+        loss_val_stdev = loaded_model["stdev"]
+        loss_val_len = loaded_model["length"]
+        
 
     model.to(device)
     WANDB.watch(model, log=None)
@@ -289,8 +301,7 @@ def bubble_image():
             for epoch in range(FLAGS.epochs):
                 num_steps = len(data_loader)
                 running_loss = 0.0
-                running_corrects = 0
-                running_total = 0.0
+                eval_loss_values = []
 
                 predindex = PredIndexAccuracy(device)
 
@@ -365,6 +376,9 @@ def bubble_image():
                             #     'Step: %d/%d, Loss: %.4f, Accuracy: %.4f, Epoch %d/%d' %
                             #     (step, num_steps, loss.item(), corrects.item(), epoch, FLAGS.epochs)
                             # )
+                            if epoch == 0:
+                                eval_loss_values.append(loss.item())
+
                             progress_bar.set_description(
                                 'Step: %d/%d, Loss: %.4f, Epoch %d/%d' %
                                 (step, num_steps, loss.item(), epoch, FLAGS.epochs)
@@ -399,9 +413,32 @@ def bubble_image():
                 if phase == 'eval':
                     # if epoch_acc > best_acc:
                     # best_acc = epoch_acc
-                    best_model = copy.deepcopy(model.state_dict())
-                    # model_copy = copy.deepcopy(model.state_dict())
-                    torch.save(best_model, os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1)))
+                    if epoch == 0 and not FLAGS.only_eval:
+                        np_eval_loss = np.array(eval_loss_values)
+                        eval_loss_mean = np.mean(np_eval_loss)
+                        eval_loss_stdev = np.std(np_eval_loss)
+                        eval_loss_len = len(eval_loss_values)
+
+                        if loss_val_len != 0:
+                            eval_loss_mean = (eval_loss_mean * eval_loss_len + loss_val_mean * loss_val_len) / (eval_loss_len + loss_val_len)
+                            eval_loss_stdev = ((eval_loss_stdev**2) * (eval_loss_len-1) + (loss_val_stdev**2) * (loss_val_len-1)) / (eval_loss_len + loss_val_len)
+                            eval_loss_stdev = eval_loss_stdev ** 0.5
+                            eval_loss_len += loss_val_len
+
+                        best_model = copy.deepcopy(model.state_dict())
+                        # model_copy = copy.deepcopy(model.state_dict())
+                        torch.save(
+                            {
+                                "model": best_model,
+                                "mean": eval_loss_mean,
+                                "stdev": eval_loss_stdev,
+                                "length": eval_loss_len
+                            },
+                            os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1))
+                        )
+                    elif epoch == 1:
+                        # TODO: Confusion matrix
+                        pass
 
     except KeyboardInterrupt:
         pass
