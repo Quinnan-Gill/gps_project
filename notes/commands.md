@@ -51,3 +51,8 @@ python src/bubble_image.py --end_train_time 2016_01_02 --start_val_time 2017_01_
  python src/bubble_image.py --end_train_time 2016_01_20 --start_val_time 2016_01_21 --end_val_time 2016_01_30 --index_filters="1,-1" --epochs=25 --dataset expanded_dataset --experiment_name filtered_lr_1e5 --learning_rate 1e-5 --message filtered_lr_1e5 --link
 
  python src/bubble_image.py --end_train_time 2016_01_20 --start_val_time 2016_01_21 --end_val_time 2016_01_30 --index_filters="1,-1" --dataset expanded_dataset --experiment_name filtered_batch_256 --message filtered_batch_256 --model_type vae --link --batch_size 256
+
+ ==================================
+ python src/bubble_image.py --end_train_time 2016_01_02 --start_val_time 2017_01_01 --end_val_time 2017_01_30 --dataset expanded_dataset --experiment_name eval_batch_256 --message eval_batch_256 --model_type vae --link --batch_size 256 --model_path experiments/filtered_batch_256_index_expanded_VAE.h_50/model_epoch_20.pt --only_eval --link
+
+ python src/bubble_image.py --end_train_time 2016_01_02 --start_val_time 2017_01_01 --end_val_time 2017_01_30 --dataset expanded_dataset --experiment_name eval_batch_128 --message eval_batch_128 --model_type vae --link --batch_size 128 --model_path experiments/filtered_batch_128_index_expanded_VAE.h_50/model_epoch_19.pt --only_eval --link
