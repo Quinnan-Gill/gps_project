@@ -5,9 +5,6 @@ import os
 import sys
 
 from sqlalchemy.sql.expression import label
-from sklearn.metrics import confusion_matrix
-import seaborn as sn
-import pandas as pd
 
 import numpy as np
 import torch
@@ -17,8 +14,10 @@ from absl import app, flags
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-import seaborn as sns
+import seaborn as sn
 import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.metrics import confusion_matrix
 from datetime import datetime
 from unittest.mock import MagicMock
 
@@ -140,11 +139,11 @@ class ImageCapture:
         
         image_labels = expand_measurements(TEC_MEASUREMENTS)
         for i, channel in enumerate(image_data):
-            ax = sns.heatmap(channel, linewidth=0.5)
+            ax = sn.heatmap(channel, linewidth=0.5)
             image_name = os.path.join(self.image_directory, f"{image_labels[i]}_{self.flag_string}")
             plt.savefig(image_name)
 
-        ax = sns.heatmap(labels.squeeze(0), linewidth=0.5)
+        ax = sn.heatmap(labels.squeeze(0), linewidth=0.5)
         image_name = os.path.join(self.image_directory, f"labels_{self.flag_string}")
         plt.savefig(image_name)
 
@@ -400,7 +399,8 @@ def bubble_image():
 
                                     plt.figure(figsize = (12,7))
                                     sn.heatmap(df_cm, annot=True)
-                                    plt.savefig('output.png')
+                                    plt.savefig(os.path.join(experiment_name, 'confusion_matrix_%s.png' % (col)))
+                                    plt.close()
 
                             
                             progress_bar.set_description(
