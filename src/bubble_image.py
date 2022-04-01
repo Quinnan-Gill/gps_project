@@ -385,6 +385,7 @@ def bubble_image():
                                 threshold = loss_val_mean + loss_val_stdev
 
                                 for i, col in enumerate(columns):
+                                    print(f"Confusion Matrix for column: {col}")
                                     channel_thresholded = (outputs[:,i,:,:] > threshold).long()
 
                                     y_true = labels.cpu().numpy().flatten()
