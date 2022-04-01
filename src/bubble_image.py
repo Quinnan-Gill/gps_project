@@ -5,6 +5,9 @@ import os
 import sys
 
 from sqlalchemy.sql.expression import label
+from sklearn.metrics import confusion_matrix
+import seaborn as sn
+import pandas as pd
 
 import numpy as np
 import torch
@@ -378,7 +381,28 @@ def bubble_image():
                             # )
                             if epoch == 0:
                                 eval_loss_values.append(loss.item())
+                            elif epoch == 1:
+                                columns = val_dataset.data_df.columns
+                                threshold = loss_val_mean + loss_val_stdev
 
+                                for i, col in enumerate(columns):
+                                    channel_thresholded = (outputs[:,i,:,:] > threshold).long()
+
+                                    y_true = labels.cpu().numpy().flatten()
+                                    y_pred = channel_thresholded.cpu().numpy().flatten()
+
+                                    cf_matrix = confusion_matrix(y_true, y_pred)
+
+                                    classes = ('no bubble', 'bubble')
+
+                                    df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix) *10, index = [i for i in classes],
+                                        columns = [i for i in classes])
+
+                                    plt.figure(figsize = (12,7))
+                                    sn.heatmap(df_cm, annot=True)
+                                    plt.savefig('output.png')
+
+                            
                             progress_bar.set_description(
                                 'Step: %d/%d, Loss: %.4f, Epoch %d/%d' %
                                 (step, num_steps, loss.item(), epoch, FLAGS.epochs)
@@ -420,6 +444,7 @@ def bubble_image():
                         eval_loss_len = len(eval_loss_values)
 
                         if loss_val_len != 0:
+                            print("Adding to loss_val_len")
                             eval_loss_mean = (eval_loss_mean * eval_loss_len + loss_val_mean * loss_val_len) / (eval_loss_len + loss_val_len)
                             eval_loss_stdev = ((eval_loss_stdev**2) * (eval_loss_len-1) + (loss_val_stdev**2) * (loss_val_len-1)) / (eval_loss_len + loss_val_len)
                             eval_loss_stdev = eval_loss_stdev ** 0.5
