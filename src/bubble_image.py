@@ -257,6 +257,7 @@ def bubble_image():
     loss_val_mean = 0
     loss_val_stdev = 0
     loss_val_len = 0
+    image_written = False
 
     if len(FLAGS.model_path) != 0:
         loaded_model = torch.load(FLAGS.model_path)
@@ -380,7 +381,7 @@ def bubble_image():
                             # )
                             if epoch == 0:
                                 eval_loss_values.append(loss.item())
-                            elif epoch == 1:
+                            elif epoch == 1 and not image_written and FLAGS.gen_conf_matrix:
                                 columns = val_dataset.data_df.columns
                                 threshold = loss_val_mean + loss_val_stdev
 
@@ -402,6 +403,8 @@ def bubble_image():
                                     sn.heatmap(df_cm, annot=True)
                                     plt.savefig(os.path.join(experiment_name, 'confusion_matrix_%s.png' % (col)))
                                     plt.close()
+
+                                image_written = True
 
                             
                             progress_bar.set_description(
