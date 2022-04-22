@@ -286,7 +286,7 @@ def bubble_image():
 
     phases = ('train', 'eval')
     if FLAGS.only_eval:
-        phases = ('eval')
+        phases = ('eval',)
 
     try:
         for phase in phases:
