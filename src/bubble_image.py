@@ -331,7 +331,7 @@ def bubble_image():
                         loss = criterion(outputs, sequences)
                         
                         # numpy_outputs = outputs.max(1)[1].cpu().numpy()
-                        numpy_labels = labels.squeeze(1).cpu().numpy()
+                        numpy_labels = labels.squeeze().cpu().numpy()
 
                         number_ones = np.sum(numpy_labels)
 
@@ -390,7 +390,7 @@ def bubble_image():
                                 threshold = loss_val_mean + loss_val_stdev
 
                                 y_true = eval_loss_labels
-                                y_pred = [1 if eval_value > threshold else 0 for eval_value in individual_loss_values]
+                                y_pred = [1 if eval_value.item() > threshold else 0 for eval_value in individual_loss_values]
 
                                 cf_matrix = confusion_matrix(y_true, y_pred)
 
