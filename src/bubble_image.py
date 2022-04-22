@@ -305,6 +305,7 @@ def bubble_image():
                 num_steps = len(data_loader)
                 running_loss = 0.0
                 eval_loss_values = []
+                individual_loss_values = []
                 eval_loss_labels = []
 
                 predindex = PredIndexAccuracy(device)
@@ -382,7 +383,28 @@ def bubble_image():
                             # )
                             if epoch == 0:
                                 eval_loss_values.append(loss.item())
-                                eval_loss_labels.append(label.item())
+                            elif epoch == 1 and not image_written and FLAGS.gen_conf_matrix:
+                                individual_loss_values = [criterion(outputs[i,:], sequences[i,:]) for i in range(outputs.shape[0])]
+                                eval_loss_labels = list(numpy_labels)
+
+                                threshold = loss_val_mean + loss_val_stdev
+
+                                y_true = eval_loss_labels
+                                y_pred = [1 if eval_value > threshold else 0 for eval_value in individual_loss_values]
+
+                                cf_matrix = confusion_matrix(y_true, y_pred)
+
+                                classes = ('no bubble', 'bubble')
+
+                                df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix), index = [i for i in classes],
+                                    columns = [i for i in classes])
+
+                                plt.figure(figsize = (12,7))
+                                sn.heatmap(df_cm, annot=True)
+                                plt.savefig(os.path.join(experiment_name, 'confusion_matrix_%s.png' % (FLAGS.message)))
+                                plt.close()
+
+                                image_written = True
 
                             
                             progress_bar.set_description(
@@ -443,25 +465,6 @@ def bubble_image():
                             },
                             os.path.join(experiment_name, 'model_epoch_%d.pt' % (epoch + 1))
                         )
-                    elif epoch == 1 and not image_written and FLAGS.gen_conf_matrix:
-                        threshold = loss_val_mean + loss_val_stdev
-
-                        y_true = eval_loss_labels
-                        y_pred = [1 if eval_value > threshold else 0 for eval_value in eval_loss_values]
-
-                        cf_matrix = confusion_matrix(y_true, y_pred)
-
-                        classes = ('no bubble', 'bubble')
-
-                        df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix), index = [i for i in classes],
-                            columns = [i for i in classes])
-
-                        plt.figure(figsize = (12,7))
-                        sn.heatmap(df_cm, annot=True)
-                        plt.savefig(os.path.join(experiment_name, 'confusion_matrix_%s.png' % (FLAGS.message)))
-                        plt.close()
-
-                        image_written = True
 
     except KeyboardInterrupt:
         pass
