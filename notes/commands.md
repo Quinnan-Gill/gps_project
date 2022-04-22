@@ -68,4 +68,4 @@ python src/bubble_image.py --end_train_time 2016_01_02 --start_val_time 2017_01_
 
  python src/bubble_image.py --end_train_time 2016_01_20 --start_val_time 2016_01_21 --end_val_time 2016_01_30 --index_filters="1,-1" --dataset expanded_dataset --model_type vae --experiment_name filtered_window_size1_batch256 --message filtered_window_size1_batch256 --window_size 1 --link --batch_size 256
 
- python src/bubble_image.py --start_val_time 2016_01_02 --end_val_time 2016_01_30 --dataset expanded_dataset --model_type vae --experiment_name eval_window_size1_batch256 --message eval_window_size1_batch256 --window_size 1--batch_size 256 --model_path experiments/filtered_window_size1_batch256_index_expanded_VAE.h_50/model_epoch_1.pt --only_eval --link --gen_conf_matrix
+ python src/bubble_image.py --start_val_time 2016_01_02 --end_val_time 2016_01_30 --dataset expanded_dataset --model_type vae --experiment_name eval_window_size1_batch256 --message eval_window_size1_batch256 --window_size 1 --batch_size 256 --model_path experiments/filtered_window_size1_batch256_index_expanded_VAE.h_50/model_epoch_1.pt --only_eval --link --gen_conf_matrix

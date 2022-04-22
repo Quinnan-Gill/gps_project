@@ -411,16 +411,15 @@ def bubble_image():
                                 'Step: %d/%d, Loss: %.4f, Epoch %d/%d' %
                                 (step, num_steps, loss.item(), epoch, FLAGS.epochs)
                             )
-                            if step % 10 == 0:
-                                WANDB.log({
-                                    'Eval Loss': loss.item(),
-                                    'Eval Number Ones': number_ones,
-                                    # 'Eval Accuracy': corrects,
-                                    # 'Eval Accuracy Precent': corrects / float(corrects + incorrects),
-                                    # 'Eval Accuracy for ones': correct_ones,
-                                    # 'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
-                                    # 'Num Ones': num_ones,
-                                })
+                            WANDB.log({
+                                'Eval Loss': loss.item(),
+                                'Eval Number Ones': number_ones,
+                                # 'Eval Accuracy': corrects,
+                                # 'Eval Accuracy Precent': corrects / float(corrects + incorrects),
+                                # 'Eval Accuracy for ones': correct_ones,
+                                # 'Eval Accuracy for ones Percent': correct_ones / float(correct_ones + incorrect_ones),
+                                # 'Num Ones': num_ones,
+                            })
                 
                     running_loss += loss.item() * sequences.size(0)
                     # running_corrects += corrects
