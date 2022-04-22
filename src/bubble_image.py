@@ -396,7 +396,7 @@ def bubble_image():
 
                                     classes = ('no bubble', 'bubble')
 
-                                    df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix) *10, index = [i for i in classes],
+                                    df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix), index = [i for i in classes],
                                         columns = [i for i in classes])
 
                                     plt.figure(figsize = (12,7))

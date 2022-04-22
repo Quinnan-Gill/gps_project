@@ -31,8 +31,8 @@ class AutoEnc(nn.Module):
         self.enc2 = DoubleConv(64, 32)
         #self.enc3 = DoubleConv(32, 16)
 
-        self.fc1 = nn.Linear(16, embedding_size)
-        self.fc2 = nn.Linear(embedding_size, 16)
+        self.fc1 = nn.Linear(32, embedding_size)
+        self.fc2 = nn.Linear(embedding_size, 32)
 
         # factor = 2 if bilinear else 1
         # 

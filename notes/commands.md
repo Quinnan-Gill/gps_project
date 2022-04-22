@@ -3,6 +3,11 @@
 singularity build postgres.sif docker://postgres:12.4
 ```
 
+Truth == Row
+Prediction == Column
+
+Assume a true one if anytime in the window has a one
+
 
 ```
 singularity run --env POSTGRES_PASSWORD=password -B postgres_data:/var/lib/postgresql/data -B postgres_run:/var/run/postgresql postgres.sif
