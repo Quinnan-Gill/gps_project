@@ -63,3 +63,9 @@ python src/bubble_image.py --end_train_time 2016_01_02 --start_val_time 2017_01_
  python src/bubble_image.py --end_train_time 2016_01_02 --start_val_time 2017_01_01 --end_val_time 2017_01_30 --dataset expanded_dataset --experiment_name eval_batch_128 --message eval_batch_128 --model_type vae --link --batch_size 128 --model_path experiments/filtered_batch_128_index_expanded_VAE.h_50/model_epoch_19.pt --only_eval --link
 
  python src/bubble_image.py --end_train_time 2016_01_20 --start_val_time 2016_01_21 --end_val_time 2016_01_30 --index_filters="1,-1" --dataset expanded_dataset --model_type vae --experiment_name filtered_window_size1 --message filtered_window_size1 --window_size 1 --link
+
+=============================
+
+ python src/bubble_image.py --end_train_time 2016_01_20 --start_val_time 2016_01_21 --end_val_time 2016_01_30 --index_filters="1,-1" --dataset expanded_dataset --model_type vae --experiment_name filtered_window_size1_batch256 --message filtered_window_size1_batch256 --window_size 1 --link --batch_size 256
+
+ python src/bubble_image.py --start_val_time 2016_01_02 --end_val_time 2016_01_30 --dataset expanded_dataset --model_type vae --experiment_name eval_window_size1_batch256 --message eval_window_size1_batch256 --window_size 1--batch_size 256 --model_path experiments/filtered_window_size1_batch256_index_expanded_VAE.h_50/model_epoch_1.pt --only_eval --link --gen_conf_matrix

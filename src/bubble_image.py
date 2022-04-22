@@ -401,7 +401,7 @@ def bubble_image():
 
                                 plt.figure(figsize = (12,7))
                                 sn.heatmap(df_cm, annot=True)
-                                plt.savefig(os.path.join(experiment_name, 'confusion_matrix_%s.png' % (FLAGS.message)))
+                                plt.savefig(os.path.join(experiment_name, 'confusion_matrix_%s_%s.png' % (FLAGS.message, step)))
                                 plt.close()
 
                                 image_written = True
