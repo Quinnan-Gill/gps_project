@@ -54,7 +54,7 @@ class AutoEnc(nn.Module):
 
         #encoding_output4 = self.enc3(encoding_output3)
         # reshaped_encoding = torch.reshape(encoding_output3, (batch_size, width, height, -1))
-        reshaped_encoding = encoding_output3.premute((0, 2, 3, 1))
+        reshaped_encoding = encoding_output3.permute((0, 2, 3, 1))
 
         fc_output1 = self.fc1(reshaped_encoding)
         fc_output2 = self.fc2(fc_output1)
